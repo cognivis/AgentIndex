@@ -11,6 +11,12 @@ export interface AppOptions {
   payTo?: string; // Hedera account id receiving payments
 }
 
+// rough testnet conversion: $1 ~= 3.3 HBAR, 1 HBAR = 100M tinybars
+function usdToTinybars(money: string): string {
+  const usd = Number(money.replace('$', ''));
+  return String(Math.round(usd * 3.3 * 100_000_000));
+}
+
 const routeHandlers: Record<string, (req: express.Request, res: express.Response) => Promise<void>> = {
   weatherpro: handlers.weather,
   scamco: handlers.scamWeather,
@@ -34,6 +40,13 @@ export function buildApp(opts: AppOptions): Express {
           {
             scheme: 'exact',
             price: svc.priceUsd,
+            network: 'hedera:testnet',
+            payTo: opts.payTo,
+          },
+          {
+            scheme: 'exact',
+            // equivalent price in HBAR (tinybars) so buyers without USDC can still pay
+            price: { asset: '0.0.0', amount: usdToTinybars(svc.priceUsd) },
             network: 'hedera:testnet',
             payTo: opts.payTo,
           },
