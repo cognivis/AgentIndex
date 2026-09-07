@@ -1,13 +1,18 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve } from 'node:path';
+
+// env lives at the repo root, shared by all workspaces
+config({ path: resolve(import.meta.dirname, '../../.env') });
 import { buildApp } from './app.js';
 import { services } from './catalog.js';
 
 const PORT = Number(process.env.SERVICES_PORT ?? 4021);
 const paywall = process.env.PAYWALL !== 'off';
-const payTo = process.env.HEDERA_ACCOUNT_ID;
+// services receive on their own account — buyers (prober, agents) pay from theirs
+const payTo = process.env.HEDERA_SERVICE_ACCOUNT_ID;
 
 if (paywall && !payTo) {
-  console.error('HEDERA_ACCOUNT_ID is required unless PAYWALL=off');
+  console.error('HEDERA_SERVICE_ACCOUNT_ID is required unless PAYWALL=off');
   process.exit(1);
 }
 

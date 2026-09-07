@@ -39,13 +39,7 @@ export function buildApp(opts: AppOptions): Express {
         accepts: [
           {
             scheme: 'exact',
-            price: svc.priceUsd,
-            network: 'hedera:testnet',
-            payTo: opts.payTo,
-          },
-          {
-            scheme: 'exact',
-            // equivalent price in HBAR (tinybars) so buyers without USDC can still pay
+            // priced in HBAR tinybars; USDC option returns once faucet funds arrive
             price: { asset: '0.0.0', amount: usdToTinybars(svc.priceUsd) },
             network: 'hedera:testnet',
             payTo: opts.payTo,

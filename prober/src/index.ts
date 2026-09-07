@@ -1,4 +1,7 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve } from 'node:path';
+
+config({ path: resolve(import.meta.dirname, '../../.env') });
 import { discoverFromHost } from './discovery.js';
 import { createPaidFetch } from './payment.js';
 import { createAttestor, createDryRunAttestor } from './attest.js';

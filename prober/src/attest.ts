@@ -45,7 +45,7 @@ export function createAttestor(): Attestor {
     throw new Error('SEPOLIA_RPC_URL, PROBER_PRIVATE_KEY and ATTESTATION_REGISTRY_ADDRESS are required');
   }
 
-  const account = privateKeyToAccount(pk as `0x${string}`);
+  const account = privateKeyToAccount(`0x${pk.replace(/^0x/, '')}`);
   const wallet = createWalletClient({ account, chain: sepolia, transport: http(rpcUrl) });
   const publicClient = createPublicClient({ chain: sepolia, transport: http(rpcUrl) });
 

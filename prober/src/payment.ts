@@ -18,6 +18,14 @@ export function createPaidFetch(): typeof fetch {
     network: 'hedera:testnet',
   });
 
-  const client = new x402Client().register('hedera:testnet', new ExactHederaScheme(signer));
+  const client = new x402Client()
+    .register('hedera:testnet', new ExactHederaScheme(signer))
+    // HBAR isn't a "default asset", so opt in — capped at 1 HBAR per payment
+    // so a malicious 402 can't drain the prober
+    .setSpendControls({
+      allowedAssets: [
+        { network: 'hedera:testnet', asset: '0.0.0', maxAmountPerPayment: '100000000' },
+      ],
+    });
   return wrapFetchWithPayment(globalThis.fetch, client);
 }
