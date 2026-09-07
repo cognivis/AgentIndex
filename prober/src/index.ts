@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 import { resolve } from 'node:path';
 
 config({ path: resolve(import.meta.dirname, '../../.env') });
-import { discoverFromHost } from './discovery.js';
+import { discoverFromHost, discoverFromRegistry } from './discovery.js';
 import { createPaidFetch } from './payment.js';
 import { createAttestor, createDryRunAttestor } from './attest.js';
 import { probeOne } from './probe.js';
@@ -20,7 +20,11 @@ async function runRound() {
   console.log(`\n[${new Date().toISOString()}] probe round starting`);
   let targets;
   try {
-    targets = await discoverFromHost(SERVICES_URL);
+    // discover from the on-chain registry when configured; host fallback for dev
+    targets = process.env.SUBNAME_REGISTRAR_ADDRESS
+      ? await discoverFromRegistry()
+      : await discoverFromHost(SERVICES_URL);
+    console.log(`discovered ${targets.length} services (${process.env.SUBNAME_REGISTRAR_ADDRESS ? 'ens registry' : 'host'})`);
   } catch (err) {
     console.error('discovery failed:', err instanceof Error ? err.message : err);
     return;

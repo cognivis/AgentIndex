@@ -1,6 +1,17 @@
-// Service discovery. v1 asks the services host what it offers (free /health +
-// /spec endpoints). Day 5 replaces this with the ENSv2 registry so the prober
-// only trusts what's actually registered on-chain.
+// Service discovery. The real path reads the ENSv2 registry: services that
+// registered a subname of agentindex.eth get probed, delisted ones drop out.
+// The host-based path (free /health + /spec endpoints) remains as a dev fallback.
+import {
+  createPublicClient,
+  http,
+  keccak256,
+  namehash,
+  parseAbi,
+  parseAbiItem,
+  toBytes,
+  type Address,
+} from 'viem';
+import { sepolia } from 'viem/chains';
 
 export interface ProbeTarget {
   label: string;
@@ -23,6 +34,87 @@ const SAMPLE_INPUTS: Record<string, { query?: string; body?: unknown }> = {
     },
   },
 };
+
+const serviceRegisteredEvent = parseAbiItem(
+  'event ServiceRegistered(bytes32 indexed labelhash, string label, address indexed owner, uint64 expiry, uint256 price)',
+);
+
+const registryAbi = parseAbi([
+  'function getStatus(uint256 anyId) view returns (uint8)',
+  'function getResolver(string label) view returns (address)',
+]);
+
+const resolverAbi = parseAbi(['function text(bytes32 node, string key) view returns (string)']);
+
+const STATUS_REGISTERED = 2;
+
+export async function discoverFromRegistry(): Promise<ProbeTarget[]> {
+  const registrar = process.env.SUBNAME_REGISTRAR_ADDRESS as Address;
+  const registry = process.env.AGENTINDEX_REGISTRY_ADDRESS as Address;
+  const fromBlock = BigInt(process.env.REGISTRAR_DEPLOY_BLOCK ?? '11650000');
+  if (!registrar || !registry) throw new Error('registrar/registry addresses not configured');
+
+  const client = createPublicClient({
+    chain: sepolia,
+    transport: http(process.env.SEPOLIA_RPC_URL),
+  });
+
+  const logs = await client.getLogs({
+    address: registrar,
+    event: serviceRegisteredEvent,
+    fromBlock,
+    toBlock: 'latest',
+  });
+  const labels = [...new Set(logs.map((l) => l.args.label!))];
+
+  const targets: ProbeTarget[] = [];
+  for (const label of labels) {
+    const status = await client.readContract({
+      address: registry,
+      abi: registryAbi,
+      functionName: 'getStatus',
+      args: [BigInt(keccak256(toBytes(label)))],
+    });
+    if (status !== STATUS_REGISTERED) continue; // expired or delisted
+
+    const resolver = await client.readContract({
+      address: registry,
+      abi: registryAbi,
+      functionName: 'getResolver',
+      args: [label],
+    });
+    if (resolver === '0x0000000000000000000000000000000000000000') continue;
+
+    const node = namehash(`${label}.agentindex.eth`);
+    const readText = (key: string) =>
+      client.readContract({ address: resolver, abi: resolverAbi, functionName: 'text', args: [node, key] });
+
+    const [url, method, specRaw] = await Promise.all([
+      readText('url'),
+      readText('x402:method'),
+      readText('x402:spec'),
+    ]);
+    if (!url || !specRaw) continue; // no manifest, nothing to verify against
+
+    let requiredFields: string[] = [];
+    try {
+      requiredFields = JSON.parse(specRaw).requiredFields ?? [];
+    } catch {
+      // unparseable spec: still probe for delivery, honesty will fail open
+    }
+
+    const sample = SAMPLE_INPUTS[label] ?? {};
+    const qs = sample.query ? `?${sample.query}` : '';
+    targets.push({
+      label,
+      url: `${url}${qs}`,
+      method: (method === 'POST' ? 'POST' : 'GET') as 'GET' | 'POST',
+      body: sample.body,
+      requiredFields,
+    });
+  }
+  return targets;
+}
 
 export async function discoverFromHost(baseUrl: string): Promise<ProbeTarget[]> {
   const health = await fetch(`${baseUrl}/health`);
