@@ -1,0 +1,10 @@
+packages:
+  - services
+  - prober
+  - mcp
+  - api
+  - web
+  - demo-agent
+allowBuilds:
+  esbuild: true
+  protobufjs: true

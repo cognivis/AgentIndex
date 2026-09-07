@@ -1,0 +1,15 @@
+{
+  "name": "agentindex",
+  "private": true,
+  "scripts": {
+    "services": "pnpm --filter @agentindex/services dev",
+    "prober": "pnpm --filter @agentindex/prober start",
+    "mcp": "pnpm --filter @agentindex/mcp dev",
+    "api": "pnpm --filter @agentindex/api dev",
+    "web": "pnpm --filter @agentindex/web dev",
+    "test": "pnpm -r test && cd contracts && forge test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
