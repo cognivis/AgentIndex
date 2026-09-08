@@ -1,0 +1,57 @@
+# A registered x402 service (keyed by ENS labelhash of its subname).
+# Trust stats are accumulated on every probe so queries never need to
+# aggregate probe history themselves.
+type Service @entity(immutable: false) {
+  id: Bytes! # labelhash
+  label: String!
+  ensName: String! # <label>.agentindex.eth
+  owner: Bytes!
+  expiry: BigInt!
+  registeredAt: BigInt!
+  registrationPrice: BigInt!
+  delisted: Boolean!
+  delistReason: String
+
+  probeCount: BigInt!
+  deliveredCount: BigInt!
+  honestCount: BigInt!
+  totalLatencyMs: BigInt!
+  totalPaid: BigInt!
+
+  # derived, in basis points (0-10000)
+  deliveryRateBps: BigInt!
+  honestyRateBps: BigInt!
+  avgLatencyMs: BigInt!
+  # 0.6*delivery + 0.25*honesty + 0.15*latency, in bps
+  trustScoreBps: BigInt!
+
+  lastProbedAt: BigInt!
+  probes: [Probe!]! @derivedFrom(field: "service")
+}
+
+# One paid probe: the payment happened on Hedera (paymentRef), the
+# verification result lives here.
+type Probe @entity(immutable: true) {
+  id: Bytes! # tx hash + log index
+  service: Service!
+  prober: Bytes!
+  delivered: Boolean!
+  honest: Boolean!
+  latencyMs: BigInt!
+  responseHash: Bytes!
+  amountPaid: BigInt!
+  paymentRef: String!
+  timestamp: BigInt!
+  block: BigInt!
+  txHash: Bytes!
+}
+
+# Running totals for the whole index, singleton id "global"
+type IndexStats @entity(immutable: false) {
+  id: String!
+  serviceCount: BigInt!
+  activeServiceCount: BigInt!
+  probeCount: BigInt!
+  totalPaid: BigInt!
+  lastProbeAt: BigInt!
+}

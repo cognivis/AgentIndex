@@ -1,6 +1,7 @@
 packages:
   - services
   - prober
+  - subgraph
   - mcp
   - api
   - web

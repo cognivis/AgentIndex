@@ -1,0 +1,51 @@
+specVersion: 1.0.0
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: ServiceRegistrar
+    network: sepolia
+    source:
+      address: "0xdeB458892c7702Fe0112161EEa28C0F46eFd6379"
+      abi: ServiceRegistrar
+      startBlock: 11654000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Service
+        - IndexStats
+      abis:
+        - name: ServiceRegistrar
+          file: ./abis/ServiceRegistrar.json
+      eventHandlers:
+        - event: ServiceRegistered(indexed bytes32,string,indexed address,uint64,uint256)
+          handler: handleServiceRegistered
+        - event: ServiceRenewed(indexed bytes32,string,uint64,uint256)
+          handler: handleServiceRenewed
+        - event: ServiceDelisted(indexed bytes32,string,string)
+          handler: handleServiceDelisted
+      file: ./src/registrar.ts
+  - kind: ethereum
+    name: AttestationRegistry
+    network: sepolia
+    source:
+      address: "0x33406801acD2A16549462153261A224F779768CC"
+      abi: AttestationRegistry
+      startBlock: 11653800
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Service
+        - Probe
+        - IndexStats
+      abis:
+        - name: AttestationRegistry
+          file: ./abis/AttestationRegistry.json
+      eventHandlers:
+        - event: ProbeResult(indexed bytes32,indexed address,bool,bool,uint32,bytes32,uint256,string,uint64)
+          handler: handleProbeResult
+      file: ./src/attestations.ts
