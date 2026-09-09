@@ -116,3 +116,15 @@ describe('formatService', () => {
     expect(out.trustScore).toBe(95);
   });
 });
+
+describe('spec-fraud rule', () => {
+  it('flags high-delivery zero-honesty services as avoid, not caution', () => {
+    const v = assess(svc({ deliveryRateBps: '8100', honestyRateBps: '0', trustScoreBps: '5750' }));
+    expect(v.recommendation).toBe('avoid');
+  });
+
+  it('does not condemn young services on thin evidence', () => {
+    const v = assess(svc({ probeCount: '3', deliveryRateBps: '10000', honestyRateBps: '0', trustScoreBps: '7500' }));
+    expect(v.recommendation).not.toBe('avoid');
+  });
+});

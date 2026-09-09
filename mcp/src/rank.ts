@@ -57,6 +57,11 @@ export function assess(service: ServiceRow): Verdict {
   if (honesty < 5000) reasons.push(`response matches its claimed spec only ${(honesty / 100).toFixed(1)}% of the time`);
   if (delivery >= 9500 && honesty >= 9500) reasons.push(`${probes} probes, consistently delivers what it promises`);
 
+  // taking payments while (almost) never honoring the spec is the scam
+  // pattern — an outright avoid no matter what the blended score says
+  if (probes >= 10 && honesty < 2000) {
+    return { recommendation: 'avoid', reasons };
+  }
   if (trust < 4000) return { recommendation: 'avoid', reasons };
   if (trust < 7500) {
     if (reasons.length === 0) reasons.push('mixed track record');
