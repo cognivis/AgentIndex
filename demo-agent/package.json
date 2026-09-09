@@ -1,0 +1,23 @@
+{
+  "name": "@agentindex/demo-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hiero-ledger/sdk": "2.85.0",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@x402/core": "^2.18.0",
+    "@x402/fetch": "^2.18.0",
+    "@x402/hedera": "^2.18.0",
+    "dotenv": "^16.4.5",
+    "tsx": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  }
+}
