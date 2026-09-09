@@ -59,13 +59,36 @@ export async function discoverFromRegistry(): Promise<ProbeTarget[]> {
     transport: http(process.env.SEPOLIA_RPC_URL),
   });
 
-  const logs = await client.getLogs({
-    address: registrar,
-    event: serviceRegisteredEvent,
-    fromBlock,
-    toBlock: 'latest',
-  });
-  const labels = [...new Set(logs.map((l) => l.args.label!))];
+  // label enumeration: prefer the subgraph (public sepolia RPCs have proven
+  // unreliable for historical getLogs); registration status, resolver and
+  // manifest are still verified on-chain below, so the chain stays the
+  // source of truth for what actually gets probed.
+  const labels = new Set<string>();
+  const subgraphUrl = process.env.SUBGRAPH_QUERY_URL;
+  if (subgraphUrl) {
+    const res = await fetch(subgraphUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: '{ services(where: { label_not: "" }) { label } }' }),
+    });
+    if (!res.ok) throw new Error(`subgraph discovery failed: ${res.status}`);
+    const json = (await res.json()) as { data?: { services: { label: string }[] } };
+    for (const s of json.data?.services ?? []) labels.add(s.label);
+  } else {
+    // fallback: chunked log scan (public RPCs cap ranges at ~50k blocks)
+    const head = await client.getBlockNumber();
+    const CHUNK = 45_000n;
+    for (let from = fromBlock; from <= head; from += CHUNK) {
+      const to = from + CHUNK - 1n > head ? head : from + CHUNK - 1n;
+      const logs = await client.getLogs({
+        address: registrar,
+        event: serviceRegisteredEvent,
+        fromBlock: from,
+        toBlock: to,
+      });
+      for (const l of logs) labels.add(l.args.label!);
+    }
+  }
 
   const targets: ProbeTarget[] = [];
   for (const label of labels) {
