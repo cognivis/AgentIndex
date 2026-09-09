@@ -1,0 +1,126 @@
+import Link from 'next/link';
+import { loadService, bps, ago } from '../../../lib/data';
+import { VerdictChip, ScoreMeter, Freshness, hashscan, etherscan } from '../../../components/bits';
+
+export const revalidate = 15;
+
+export default async function ServicePage({ params }: { params: Promise<{ label: string }> }) {
+  const { label } = await params;
+  const { service, manifest, meta } = await loadService(label);
+
+  if (!service) {
+    return (
+      <div className="wrap">
+        <header className="site">
+          <div className="logo">
+            agent<span>index</span>
+          </div>
+        </header>
+        <p>
+          No service “{label}” in the index. <Link href="/">← back</Link>
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="wrap">
+      <header className="site">
+        <div className="logo">
+          <Link href="/">
+            agent<span>index</span>
+          </Link>
+        </div>
+        <Freshness block={meta.block.number} timestamp={meta.block.timestamp} />
+      </header>
+
+      <div className="crumb">
+        <Link href="/">services</Link> / {service.label}
+      </div>
+
+      <div className="detail-head">
+        <h1>{service.ensName}</h1>
+        <VerdictChip verdict={service.verdict} />
+      </div>
+      {manifest && <p className="dim">{manifest.description}</p>}
+      {manifest && (
+        <div className="endpoint">
+          {manifest.method} {manifest.url} · {manifest.price}/call
+        </div>
+      )}
+      {service.delisted && (
+        <p className="num-bad">Delisted: {service.delistReason ?? 'no reason recorded'}</p>
+      )}
+      <p className="dim">{service.verdict.reasons.join(' · ')}</p>
+
+      <div className="tiles">
+        <div className="tile">
+          <div className="label">Trust score</div>
+          <ScoreMeter scoreBps={service.trustScoreBps} />
+          <div className="sub">60% delivery · 25% honesty · 15% latency</div>
+        </div>
+        <div className="tile">
+          <div className="label">Delivery rate</div>
+          <div className="value">{bps(service.deliveryRateBps).toFixed(1)}%</div>
+          <div className="sub">of paid requests returned data</div>
+        </div>
+        <div className="tile">
+          <div className="label">Honesty rate</div>
+          <div className="value">{bps(service.honestyRateBps).toFixed(1)}%</div>
+          <div className="sub">responses matching claimed spec</div>
+        </div>
+        <div className="tile">
+          <div className="label">Avg latency</div>
+          <div className="value">{Number(service.avgLatencyMs).toLocaleString()}ms</div>
+          <div className="sub">{service.probeCount} probes total</div>
+        </div>
+      </div>
+
+      <h2>Probe history</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>Result</th>
+            <th>Latency</th>
+            <th>Hedera payment</th>
+            <th>Attestation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {service.probes.map((p, i) => (
+            <tr key={i}>
+              <td className="dim">{ago(Number(p.timestamp))}</td>
+              <td>
+                {p.delivered ? (
+                  p.honest ? (
+                    <span className="num-good">✓ honest</span>
+                  ) : (
+                    <span className="num-bad">✕ junk response</span>
+                  )
+                ) : (
+                  <span className="num-bad">✕ no delivery</span>
+                )}
+              </td>
+              <td className="dim">{Number(p.latencyMs).toLocaleString()}ms</td>
+              <td>
+                {p.paymentRef ? (
+                  <a className="ref" href={hashscan(p.paymentRef)} target="_blank" style={{ color: 'var(--seq)', fontSize: 12 }}>
+                    {p.paymentRef.slice(0, 28)}… ↗
+                  </a>
+                ) : (
+                  <span className="dim">—</span>
+                )}
+              </td>
+              <td>
+                <a className="ref" href={etherscan(p.txHash)} target="_blank" style={{ color: 'var(--seq)', fontSize: 12 }}>
+                  {p.txHash.slice(0, 12)}… ↗
+                </a>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
