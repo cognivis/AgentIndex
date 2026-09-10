@@ -1,0 +1,66 @@
+.strip {
+  margin: 8px 0 4px;
+}
+.title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 12px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.card {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.card:hover {
+  border-color: var(--seq);
+  transform: translateY(-1px);
+}
+.icon {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+.role {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 3px;
+}
+.role span {
+  color: var(--seq);
+}
+.desc {
+  color: var(--ink-2);
+  font-size: 13px;
+  margin-bottom: 12px;
+  line-height: 1.45;
+}
+.cta {
+  color: var(--seq);
+  font-size: 13px;
+  font-weight: 600;
+}
+.here {
+  background: rgba(57, 135, 229, 0.06);
+  border-color: rgba(57, 135, 229, 0.35);
+}
+.hereTag {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+@media (max-width: 760px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

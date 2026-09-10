@@ -20,6 +20,51 @@
   box-sizing: border-box;
 }
 
+.topnav {
+  border-bottom: 1px solid var(--border);
+  background: rgba(13, 13, 13, 0.85);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topnav-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.topnav-brand {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.topnav-brand span {
+  color: var(--seq);
+}
+.topnav-links {
+  display: flex;
+  gap: 22px;
+}
+.topnav-links a {
+  color: var(--muted);
+  font-size: 13px;
+}
+.topnav-links a:hover {
+  color: var(--ink-2);
+}
+.topnav-links a.on {
+  color: var(--ink);
+}
+@media (max-width: 620px) {
+  .topnav-links {
+    gap: 14px;
+  }
+}
+
 body {
   margin: 0;
   background: var(--page);

@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { createHash } from 'node:crypto';
+import { fetchPrice, supportedSymbols } from './price-source.js';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -36,24 +37,25 @@ export async function scamWeather(_req: Request, res: Response) {
   res.json(junk[seeded(String(Date.now()), junk.length)]);
 }
 
-const BASE_PRICES: Record<string, number> = {
-  ETH: 4200, BTC: 118000, HBAR: 0.31, USDC: 1, SOL: 260, LINK: 32,
-};
-
+// Backed by real market data from The Graph Token API (see price-source.ts).
+// No canned numbers — an unsupported symbol or an upstream outage returns an
+// honest error rather than fabricated data.
 export async function spotPrice(req: Request, res: Response) {
   const symbol = String(req.query.symbol ?? 'ETH').toUpperCase();
-  const base = BASE_PRICES[symbol];
-  if (!base) {
-    res.status(404).json({ error: `unknown symbol: ${symbol}` });
+  const quote = await fetchPrice(symbol);
+  if (!quote) {
+    res.status(404).json({
+      error: `no live price source for ${symbol}`,
+      supported: supportedSymbols(),
+    });
     return;
   }
-  const hour = new Date().toISOString().slice(0, 13);
-  const wobble = (seeded(symbol + hour, 1000) - 500) / 10000; // ±5%
   res.json({
-    symbol,
-    priceUsd: +(base * (1 + wobble)).toFixed(base < 1 ? 6 : 2),
-    change24h: +(((seeded(symbol + hour + 'd', 160) - 80) / 10)).toFixed(1),
-    asOf: new Date().toISOString(),
+    symbol: quote.symbol,
+    priceUsd: +quote.priceUsd.toFixed(quote.priceUsd < 1 ? 6 : 2),
+    change24h: +quote.change24h.toFixed(2),
+    source: quote.source,
+    asOf: quote.asOf,
   });
 }
 

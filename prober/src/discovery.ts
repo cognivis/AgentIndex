@@ -19,7 +19,25 @@ export interface ProbeTarget {
   method: 'GET' | 'POST';
   body?: unknown;
   requiredFields: string[];
+  // where this target came from — 'ens'/'host' are our own registry, 'external'
+  // is a real third-party service pulled from a public x402 directory
+  source?: 'ens' | 'host' | 'external';
+  // oracle-check metadata (only set for objective-data services like price feeds)
+  category?: 'price' | 'other';
+  symbol?: string; // e.g. "ETH" — the asset whose price we cross-check
+  pricePath?: string; // dot-path to the price in the response, e.g. "data.price"
+  // directory metadata for external services
+  network?: string; // caip2, e.g. "eip155:8453" (Base)
+  priceUsd?: number; // advertised per-call price
+  slug?: string;
 }
+
+// price-feed metadata per known label: which symbol the sample input asks for
+// and where the price sits in the response, so the oracle can cross-check it.
+// Our own pricefeed reports `priceUsd` and is queried with symbol=ETH.
+const PRICE_META: Record<string, { symbol: string; pricePath: string }> = {
+  pricefeed: { symbol: 'ETH', pricePath: 'priceUsd' },
+};
 
 // sample inputs per known label; unknown services get probed bare
 const SAMPLE_INPUTS: Record<string, { query?: string; body?: unknown }> = {
@@ -128,12 +146,15 @@ export async function discoverFromRegistry(): Promise<ProbeTarget[]> {
 
     const sample = SAMPLE_INPUTS[label] ?? {};
     const qs = sample.query ? `?${sample.query}` : '';
+    const price = PRICE_META[label];
     targets.push({
       label,
       url: `${url}${qs}`,
       method: (method === 'POST' ? 'POST' : 'GET') as 'GET' | 'POST',
       body: sample.body,
       requiredFields,
+      source: 'ens',
+      ...(price ? { category: 'price' as const, symbol: price.symbol, pricePath: price.pricePath } : {}),
     });
   }
   return targets;
@@ -156,12 +177,15 @@ export async function discoverFromHost(baseUrl: string): Promise<ProbeTarget[]> 
 
     const sample = SAMPLE_INPUTS[label] ?? {};
     const qs = sample.query ? `?${sample.query}` : '';
+    const price = PRICE_META[label];
     targets.push({
       label,
       url: `${baseUrl}${spec.path}${qs}`,
       method: spec.method,
       body: sample.body,
       requiredFields: spec.spec.requiredFields,
+      source: 'host',
+      ...(price ? { category: 'price' as const, symbol: price.symbol, pricePath: price.pricePath } : {}),
     });
   }
   return targets;

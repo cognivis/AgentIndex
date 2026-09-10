@@ -1,13 +1,19 @@
 import type { ProbeTarget } from './discovery.js';
 import { verifyResponse, extractPaymentRef, type ProbeOutcome } from './verify.js';
+import type { Oracle, OracleCheck } from './oracle.js';
 
 export interface ProbeResult {
   target: ProbeTarget;
   outcome: ProbeOutcome;
   paymentRef: string;
+  oracleCheck?: OracleCheck;
 }
 
-export async function probeOne(target: ProbeTarget, paidFetch: typeof fetch): Promise<ProbeResult> {
+export async function probeOne(
+  target: ProbeTarget,
+  paidFetch: typeof fetch,
+  oracle?: Oracle,
+): Promise<ProbeResult> {
   const started = Date.now();
   let status = 0;
   let body = '';
@@ -28,6 +34,20 @@ export async function probeOne(target: ProbeTarget, paidFetch: typeof fetch): Pr
   }
 
   const latencyMs = Date.now() - started;
-  const outcome = verifyResponse({ status, body, latencyMs }, target.requiredFields);
-  return { target, outcome, paymentRef };
+  let outcome = verifyResponse({ status, body, latencyMs }, target.requiredFields);
+
+  // Objective-data services get a second, harder test: is the number actually
+  // right? Cross-check the claimed price against The Graph oracle. A feed that
+  // delivered a spec-conformant but wrong price is downgraded to dishonest. The
+  // oracle only ever DOWNGRADES (na/agree leave the spec verdict untouched), so
+  // a missing key or unpriceable symbol can never cause a false accusation.
+  let oracleCheck: OracleCheck | undefined;
+  if (oracle && target.category === 'price' && outcome.delivered) {
+    oracleCheck = await oracle.check(target, body);
+    if (oracleCheck.verdict === 'deviates') {
+      outcome = { ...outcome, honest: false };
+    }
+  }
+
+  return { target, outcome, paymentRef, oracleCheck };
 }

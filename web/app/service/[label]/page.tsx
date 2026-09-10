@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { loadService, bps, ago } from '../../../lib/data';
 import { VerdictChip, ScoreMeter, Freshness, hashscan, etherscan } from '../../../components/bits';
+import ProbeTimeline from '../../../components/probe-timeline';
 
 export const revalidate = 15;
 
@@ -75,6 +76,89 @@ export default async function ServicePage({ params }: { params: Promise<{ label:
           <div className="sub">{service.probeCount} probes total</div>
         </div>
       </div>
+
+      {(() => {
+        // Trust = 60% delivery + 25% honesty + 15% latency. Delivery & honesty
+        // arrive as rates (bps); back-solve the latency component from the
+        // published blend so the breakdown reflects the real on-chain score.
+        const delivery = bps(service.deliveryRateBps);
+        const honesty = bps(service.honestyRateBps);
+        const trust = bps(service.trustScoreBps);
+        const latencyScore = Math.max(0, Math.min(100, (trust - 0.6 * delivery - 0.25 * honesty) / 0.15));
+        const parts = [
+          { label: 'Delivery', weight: 60, pct: delivery, note: 'returned data for paid requests' },
+          { label: 'Honesty', weight: 25, pct: honesty, note: 'responses matched the claimed spec' },
+          {
+            label: 'Latency',
+            weight: 15,
+            pct: latencyScore,
+            note: `scored from ${Number(service.avgLatencyMs).toLocaleString()}ms avg`,
+          },
+        ];
+        return (
+          <div className="tile" style={{ marginTop: 16 }}>
+            <div className="label">Why this verdict</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+              {parts.map((p) => (
+                <div key={p.label}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'baseline',
+                      fontSize: 13,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span>
+                      {p.label}{' '}
+                      <span className="dim" style={{ fontSize: 11 }}>
+                        {p.weight}% of score
+                      </span>
+                    </span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{p.pct.toFixed(1)}%</span>
+                  </div>
+                  <div
+                    style={{
+                      height: 8,
+                      borderRadius: 4,
+                      background: 'var(--grid)',
+                      overflow: 'hidden',
+                    }}
+                    role="meter"
+                    aria-label={`${p.label} ${p.pct.toFixed(1)} percent, weighted ${p.weight} percent of the trust score`}
+                    aria-valuenow={Math.round(p.pct)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
+                    <div
+                      style={{
+                        width: `${Math.max(0, Math.min(100, p.pct))}%`,
+                        height: '100%',
+                        background: 'var(--seq)',
+                      }}
+                    />
+                  </div>
+                  <div className="dim" style={{ fontSize: 11, marginTop: 3 }}>
+                    {p.note}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {service.verdict.reasons.length > 0 && (
+              <ul style={{ margin: '14px 0 0', paddingLeft: 18, fontSize: 13, color: 'var(--ink-2)' }}>
+                {service.verdict.reasons.map((r, i) => (
+                  <li key={i} style={{ marginBottom: 2 }}>
+                    {r}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })()}
+
+      <ProbeTimeline probes={service.probes} />
 
       <h2>Probe history</h2>
       <table>

@@ -117,6 +117,93 @@ server.registerTool(
   },
 );
 
+server.registerTool(
+  'get_verified_data',
+  {
+    description:
+      'One call: pick the most-trusted service for a need, fetch the data from it, and return the data together with that provider\'s trust score and its latest on-chain probe receipt as proof. Use when you want the answer AND a record of why the source was trusted. Scam / low-trust providers are never selected.',
+    inputSchema: {
+      need: z.string().describe('The data you want, e.g. "current ETH price" or "weather in Singapore"'),
+    },
+  },
+  async ({ need }) => {
+    const { candidates, meta } = await loadCandidates();
+    const ranked = rankForNeed(need, candidates);
+    const best = ranked.find((c) => {
+      const r = assess(c.service).recommendation;
+      return r === 'trusted' || r === 'caution';
+    });
+
+    if (!best || !best.manifest?.url) {
+      return reply({
+        need,
+        data: null,
+        reason: 'no service with an acceptable track record (and a readable endpoint) matches this need',
+        avoid: ranked
+          .filter((c) => assess(c.service).recommendation === 'avoid')
+          .map(formatService),
+        _meta: freshness(meta),
+      });
+    }
+
+    // fetch the data from the chosen provider. NOTE: this scaffold reads the
+    // endpoint directly — it works for free/preview reads and surfaces the x402
+    // terms when payment is required. Settling the payment (Hedera x402, the
+    // prober already does this) is wired in the demo-agent path; here we prove
+    // the selection + proof flow end to end.
+    const method = best.manifest.method === 'POST' ? 'POST' : 'GET';
+    let data: unknown = null;
+    let paymentRequired: unknown = null;
+    let fetchError: string | null = null;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 8_000);
+      const res = await fetch(best.manifest.url, { method, signal: ctrl.signal }).finally(() =>
+        clearTimeout(t),
+      );
+      if (res.status === 402) {
+        paymentRequired = {
+          note: 'provider requires x402 payment; pay via the terms below, then re-request',
+          price: best.manifest.price ?? null,
+          endpoint: best.manifest.url,
+          accepts: await res.json().catch(() => null),
+        };
+      } else if (res.ok) {
+        data = await res.json().catch(() => null);
+      } else {
+        fetchError = `provider returned ${res.status}`;
+      }
+    } catch (e) {
+      fetchError = e instanceof Error ? e.message : 'request failed';
+    }
+
+    // proof: the most recent on-chain probe receipt for the chosen provider
+    const { service: withProbes } = await subgraph
+      .serviceWithProbes(best.service.label, 1)
+      .catch(() => ({ service: null }));
+    const latest = withProbes?.probes?.[0];
+    const proof = latest
+      ? {
+          delivered: latest.delivered,
+          honest: latest.honest,
+          hederaPayment: latest.paymentRef,
+          attestationTx: latest.txHash,
+          at: new Date(Number(latest.timestamp) * 1000).toISOString(),
+        }
+      : null;
+
+    return reply({
+      need,
+      paidService: formatService(best),
+      data,
+      paymentRequired,
+      error: fetchError,
+      proof,
+      _meta: freshness(meta),
+    });
+  },
+);
+
 const transport = new StdioServerTransport();
 await server.connect(transport);
 console.error('agentindex mcp ready (stdio)');
