@@ -20,6 +20,7 @@ const DIRECTORY_TIMEOUT_MS = 8_000;
 interface FeedAdapter {
   slug: string; // x402-list.com slug, for enrichment + provenance
   symbol: string; // asset the feed reports, uppercased ticker
+  endpointPath?: string; // directory endpoint whose live payment terms must match
   path?: string; // explicit parameterized path when directory examples are not semantic IDs
   // dot-path to the numeric USD price in the response body; the oracle reads it
   pricePath: string;
@@ -35,9 +36,21 @@ const CURATED: FeedAdapter[] = [
   {
     slug: 'tickersfeed',
     symbol: 'BTC',
+    endpointPath: '/crypto/1',
     path: '/crypto/BTC',
     pricePath: 'market.price_usd',
     requiredFields: ['symbol', 'name', 'market'],
+  },
+  // Onchain Query API — documented x402 Bazaar output example exposes a
+  // top-level price_usd. Kept disabled unless explicitly added to
+  // EXTERNAL_FEED_ALLOWLIST so adding an adapter never silently spends funds.
+  {
+    slug: 'onchain-query-api',
+    symbol: 'BTC',
+    endpointPath: '/price',
+    path: '/price?query=BTC',
+    pricePath: 'price_usd',
+    requiredFields: ['query', 'price_usd', 'source'],
   },
 ];
 
@@ -88,9 +101,12 @@ async function toTarget(feed: FeedAdapter): Promise<ProbeTarget | null> {
   const detail = (response as DirectoryResponse | null)?.data ?? (response as DirectoryDetail | null);
   if (!detail?.base_url) return null;
 
-  // prefer a GET endpoint (cheap to probe); else take the first
+  // An explicit adapter endpoint prevents accidentally borrowing payment terms
+  // from a different route on a multi-endpoint service.
   const endpoints = detail.endpoints ?? [];
-  const ep = endpoints.find((e) => (e.method ?? 'GET').toUpperCase() === 'GET') ?? endpoints[0];
+  const ep = feed.endpointPath
+    ? endpoints.find((endpoint) => endpoint.path === feed.endpointPath)
+    : endpoints.find((endpoint) => (endpoint.method ?? 'GET').toUpperCase() === 'GET') ?? endpoints[0];
   if (!ep?.path) return null;
 
   const pricing = ep.pricing?.find((p) => p.network_caip2 === 'eip155:8453') ?? ep.pricing?.[0];
@@ -117,7 +133,19 @@ async function toTarget(feed: FeedAdapter): Promise<ProbeTarget | null> {
 // and non-fatal — a directory outage yields an empty list, and the prober simply
 // runs its ENS-registered targets that round.
 export async function discoverExternalFeeds(): Promise<ProbeTarget[]> {
-  const targets = await Promise.all(CURATED.map(toTarget));
+  const configured = process.env.EXTERNAL_FEED_ALLOWLIST ?? 'tickersfeed';
+  const requested = new Set(
+    configured
+      .split(',')
+      .map((slug) => slug.trim())
+      .filter(Boolean),
+  );
+  const known = new Set(CURATED.map((feed) => feed.slug));
+  const unknown = [...requested].filter((slug) => !known.has(slug));
+  if (unknown.length) {
+    throw new Error(`unknown EXTERNAL_FEED_ALLOWLIST entries: ${unknown.join(', ')}`);
+  }
+  const targets = await Promise.all(CURATED.filter((feed) => requested.has(feed.slug)).map(toTarget));
   return targets.filter((t): t is ProbeTarget => t !== null);
 }
 

@@ -9,10 +9,14 @@ export const metadata: Metadata = {
     'Plug the AgentIndex trust index into your agent via MCP or the x402 API, or list your own service.',
 };
 
+export const dynamic = 'force-dynamic';
+
 const REGISTRAR =
   'https://sepolia.etherscan.io/address/0xdeB458892c7702Fe0112161EEa28C0F46eFd6379';
 const REPO = 'https://github.com/cognivis/AgentIndex';
-const REMOTE_MCP_URL = process.env.NEXT_PUBLIC_MCP_URL ?? 'https://<your-mcp-host>/mcp';
+const REMOTE_MCP_URL = process.env.PUBLIC_MCP_URL
+  ? `${process.env.PUBLIC_MCP_URL.replace(/\/$/, '')}/mcp`
+  : process.env.NEXT_PUBLIC_MCP_URL ?? 'https://<your-mcp-host>/mcp';
 const MCP_INSTALL = `npx add-mcp ${REMOTE_MCP_URL}`;
 
 const MCP_CONFIG = `{

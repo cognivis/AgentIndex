@@ -37,6 +37,8 @@ describe('probeOne external evidence', () => {
         headers: {
           'PAYMENT-RESPONSE': paymentHeader(`0x${'a'.repeat(64)}`),
           'X-AGENTINDEX-PAYMENT-AMOUNT': '2000',
+          'X-AGENTINDEX-ROUND-SPEND': '4000',
+          'X-AGENTINDEX-DAILY-SPEND': '6000',
         },
       });
 
@@ -44,6 +46,7 @@ describe('probeOne external evidence', () => {
     expect(result.specHonest).toBe(true);
     expect(result.outcome.honest).toBe(true);
     expect(result.amountPaid).toBe(2000n);
+    expect(result.baseSpend).toEqual({ roundAtomic: 4000n, dailyAtomic: 6000n });
     expect(result.paymentRef).toBe(`base:0x${'a'.repeat(64)}`);
   });
 

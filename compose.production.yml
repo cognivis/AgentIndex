@@ -1,0 +1,142 @@
+name: agentindex
+
+x-chain-read-env: &chain-read-env
+  SUBGRAPH_QUERY_URL: ${SUBGRAPH_QUERY_URL:?set SUBGRAPH_QUERY_URL}
+  SUBGRAPH_DEPLOYMENT_ID: ${SUBGRAPH_DEPLOYMENT_ID:-}
+  AGENTINDEX_REGISTRY_ADDRESS: ${AGENTINDEX_REGISTRY_ADDRESS:?set AGENTINDEX_REGISTRY_ADDRESS}
+  SEPOLIA_RPC_URL: ${SEPOLIA_RPC_URL:?set SEPOLIA_RPC_URL}
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      WEB_DOMAIN: ${WEB_DOMAIN:?set WEB_DOMAIN}
+      MCP_DOMAIN: ${MCP_DOMAIN:?set MCP_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN}
+      SERVICES_DOMAIN: ${SERVICES_DOMAIN:?set SERVICES_DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+      mcp:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      services:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: web
+    restart: unless-stopped
+    environment:
+      <<: *chain-read-env
+      PUBLIC_MCP_URL: https://${MCP_DOMAIN}
+      REGISTER_ENABLED: "0"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  mcp:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: mcp
+    restart: unless-stopped
+    environment:
+      <<: *chain-read-env
+      MCP_PORT: "8787"
+      PUBLIC_MCP_URL: https://${MCP_DOMAIN}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: api
+    restart: unless-stopped
+    environment:
+      <<: *chain-read-env
+      API_PORT: "4030"
+      PAYWALL: "on"
+      HEDERA_SERVICE_ACCOUNT_ID: ${HEDERA_SERVICE_ACCOUNT_ID:?set HEDERA_SERVICE_ACCOUNT_ID}
+      X402_FACILITATOR_URL: ${X402_FACILITATOR_URL:-https://api.testnet.blocky402.com}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4030/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  services:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: services
+    restart: unless-stopped
+    environment:
+      SERVICES_PORT: "4021"
+      PAYWALL: "on"
+      HEDERA_SERVICE_ACCOUNT_ID: ${HEDERA_SERVICE_ACCOUNT_ID:?set HEDERA_SERVICE_ACCOUNT_ID}
+      X402_FACILITATOR_URL: ${X402_FACILITATOR_URL:-https://api.testnet.blocky402.com}
+      THEGRAPH_TOKEN_API_KEY: ${THEGRAPH_TOKEN_API_KEY:?set THEGRAPH_TOKEN_API_KEY}
+      TOKEN_API_BASE: ${TOKEN_API_BASE:-https://api.pinax.network}
+      TOKEN_API_NETWORK: ${TOKEN_API_NETWORK:-mainnet}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4021/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  prober:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: prober
+    restart: unless-stopped
+    profiles: ["worker"]
+    depends_on:
+      services:
+        condition: service_healthy
+    environment:
+      <<: *chain-read-env
+      SERVICES_URL: http://services:4021
+      PAYWALL: "on"
+      HEDERA_ACCOUNT_ID: ${HEDERA_ACCOUNT_ID:?set HEDERA_ACCOUNT_ID}
+      HEDERA_PRIVATE_KEY: ${HEDERA_PRIVATE_KEY:?set HEDERA_PRIVATE_KEY}
+      PROBER_PRIVATE_KEY: ${PROBER_PRIVATE_KEY:?set PROBER_PRIVATE_KEY}
+      ATTESTATION_REGISTRY_ADDRESS: ${ATTESTATION_REGISTRY_ADDRESS:?set ATTESTATION_REGISTRY_ADDRESS}
+      SUBNAME_REGISTRAR_ADDRESS: ${SUBNAME_REGISTRAR_ADDRESS:?set SUBNAME_REGISTRAR_ADDRESS}
+      REGISTRAR_DEPLOY_BLOCK: ${REGISTRAR_DEPLOY_BLOCK:-11650000}
+      THEGRAPH_TOKEN_API_KEY: ${THEGRAPH_TOKEN_API_KEY:?set THEGRAPH_TOKEN_API_KEY}
+      TOKEN_API_BASE: ${TOKEN_API_BASE:-https://api.pinax.network}
+      TOKEN_API_NETWORK: ${TOKEN_API_NETWORK:-mainnet}
+      PROBE_INTERVAL_MS: ${PROBE_INTERVAL_MS:-600000}
+      PROBE_EXTERNAL: "0"
+      EXTERNAL_FEED_ALLOWLIST: ${EXTERNAL_FEED_ALLOWLIST:-tickersfeed}
+      ORACLE_TOLERANCE_BPS: ${ORACLE_TOLERANCE_BPS:-200}
+      CONSENSUS_TOLERANCE_BPS: ${CONSENSUS_TOLERANCE_BPS:-200}
+      BASE_ROUND_BUDGET_ATOMIC: ${BASE_ROUND_BUDGET_ATOMIC:-50000}
+      BASE_DAILY_BUDGET_ATOMIC: ${BASE_DAILY_BUDGET_ATOMIC:-100000}
+      BASE_SPEND_LEDGER_PATH: /app/.agentindex/base-spend-ledger.json
+    volumes:
+      - prober_state:/app/.agentindex
+
+volumes:
+  caddy_data:
+  caddy_config:
+  prober_state:

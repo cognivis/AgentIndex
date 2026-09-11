@@ -42,5 +42,6 @@ After deployment, clients can install it with:
 npx add-mcp https://YOUR_HOST/mcp
 ```
 
-Replace the placeholder URL in `server.json` before submitting it to an MCP
-registry. Do not publish the template as-is.
+The registry metadata points to the production MCP endpoint at
+`https://mcp-agentindex.craftyour.site/mcp`; publish it only after that endpoint
+passes the public health and tool checks.

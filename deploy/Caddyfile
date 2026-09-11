@@ -1,0 +1,19 @@
+{$WEB_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy web:3000
+}
+
+{$MCP_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy mcp:8787
+}
+
+{$API_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy api:4030
+}
+
+{$SERVICES_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy services:4021
+}

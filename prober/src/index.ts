@@ -62,7 +62,7 @@ async function runRound() {
   // Consensus needs the whole round. Only attest after it has had a chance to
   // downgrade an objective-data outlier, so the on-chain verdict is final.
   for (const result of applyConsensus(probed)) {
-    const { target, outcome, paymentRef, amountPaid, oracleCheck, consensusCheck } = result;
+    const { target, outcome, paymentRef, amountPaid, baseSpend, oracleCheck, consensusCheck } = result;
     try {
       const tx = await attestor.attest(target.label, outcome, amountPaid, paymentRef);
       const oracleNote = oracleCheck
@@ -97,6 +97,12 @@ async function runRound() {
             oracle: oracleCheck ?? null,
             consensus: consensusCheck ?? null,
             amountPaid: amountPaid.toString(),
+            spendCaps: baseSpend
+              ? {
+                  roundAtomic: baseSpend.roundAtomic.toString(),
+                  dailyAtomic: baseSpend.dailyAtomic.toString(),
+                }
+              : null,
             paymentRef,
             attestationTx: tx,
           })}`,

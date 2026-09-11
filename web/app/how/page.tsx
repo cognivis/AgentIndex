@@ -32,8 +32,9 @@ const stages: Stage[] = [
     title: 'Probe',
     desc: (
       <>
-        An autonomous prober pays each service real HBAR over x402 on Hedera testnet — anonymously,
-        like any customer — and records what came back.
+        An autonomous prober pays seeded services in HBAR on Hedera and external services in USDC
+        on Base — anonymously, like any customer. Per-payment, per-round, and persistent daily caps
+        protect the wallet.
       </>
     ),
     sponsor: 'Hedera',
@@ -44,8 +45,8 @@ const stages: Stage[] = [
     title: 'Attest',
     desc: (
       <>
-        Every probe&apos;s result — delivered? honest vs its claimed spec? how slow? — is written
-        on-chain as an attestation.
+        Every probe checks delivery and the declared spec. Objective prices are also compared with
+        The Graph oracle and peer consensus before the final verdict is attested on-chain.
       </>
     ),
     sponsor: 'on-chain (Sepolia)',
@@ -71,8 +72,8 @@ const stages: Stage[] = [
     desc: (
       <>
         An AI agent asks the index (over MCP: <code>find_service</code> / <code>check_trust</code> /{' '}
-        <code>resolve_data_need</code>) which service to pay — and which to avoid — before spending a
-        cent.
+        <code>resolve_data_need</code> / <code>get_verified_data</code>) which service to pay — and
+        which to avoid — before spending a cent.
       </>
     ),
     sponsor: 'MCP',
@@ -149,8 +150,9 @@ export default function HowItWorks() {
       </div>
 
       <p className={styles.callout}>
-        <b>ENS</b> gives every service an identity, <b>Hedera</b> settles every probe payment, and{' '}
-        <b>The Graph</b> turns the on-chain receipts into a trust score agents can query.
+        <b>ENS</b> gives every registered service an identity, <b>Hedera</b> settles spend-capped HBAR
+        probes, and <b>The Graph</b> supplies oracle truth and turns attestations into a trust score
+        agents can query.
       </p>
     </div>
   );

@@ -27,6 +27,7 @@ web/.next/
 web/out/
 
 # misc
+.agentindex/
 dist/
 *.log
 .DS_Store

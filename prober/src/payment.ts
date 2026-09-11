@@ -5,6 +5,7 @@ import { createClientHederaSigner } from '@x402/hedera';
 import { PrivateKey } from '@hiero-ledger/sdk';
 import { privateKeyToAccount } from 'viem/accounts';
 import type { ProbeTarget } from './discovery.js';
+import { BaseSpendBudget, createBaseSpendBudget } from './spend-budget.js';
 
 export const BASE_NETWORK = 'eip155:8453';
 export const BASE_V1_NETWORK = 'base';
@@ -20,14 +21,18 @@ interface PaymentRequirementLike {
   maxAmountRequired?: string;
 }
 
+function requirementAmount(req: PaymentRequirementLike): bigint | null {
+  const rawAmount = req.amount ?? req.maxAmountRequired;
+  return rawAmount && /^\d+$/.test(rawAmount) ? BigInt(rawAmount) : null;
+}
+
 /// Defense in depth on top of the SDK spend controls. The remote server owns
 /// the 402 response, so never trust its advertised network, asset, or amount.
 export function isAllowedBasePaymentRequirement(req: PaymentRequirementLike): boolean {
   if (req.network !== BASE_NETWORK && req.network !== BASE_V1_NETWORK) return false;
   if (req.asset.toLowerCase() !== BASE_USDC.toLowerCase()) return false;
-  const rawAmount = req.amount ?? req.maxAmountRequired;
-  if (!rawAmount || !/^\d+$/.test(rawAmount)) return false;
-  return BigInt(rawAmount) <= BASE_MAX_PAYMENT_ATOMIC;
+  const amount = requirementAmount(req);
+  return amount !== null && amount <= BASE_MAX_PAYMENT_ATOMIC;
 }
 
 export function assertSafeExternalTarget(target: ProbeTarget): void {
@@ -84,7 +89,10 @@ export function createPaidFetch(): typeof fetch {
 /// Returns a Base-mainnet x402 client scoped to canonical USDC and capped at
 /// one cent. Credentials are loaded lazily, so ordinary Hedera rounds do not
 /// require a Base key and external probing remains explicitly opt-in.
-export function createBasePaidFetch(target: ProbeTarget): typeof fetch {
+export function createBasePaidFetch(
+  target: ProbeTarget,
+  budget: BaseSpendBudget = createBaseSpendBudget(),
+): typeof fetch {
   assertSafeExternalTarget(target);
 
   const privateKey = process.env.BASE_PRIVATE_KEY;
@@ -99,7 +107,13 @@ export function createBasePaidFetch(target: ProbeTarget): typeof fetch {
   registerExactEvmScheme(client, {
     signer,
     networks: [BASE_NETWORK],
-    policies: [(_version, requirements) => requirements.filter(isAllowedBasePaymentRequirement)],
+    policies: [
+      (_version, requirements) =>
+        requirements.filter((requirement) => {
+          const amount = requirementAmount(requirement);
+          return isAllowedBasePaymentRequirement(requirement) && amount !== null && budget.canSpend(amount);
+        }),
+    ],
   });
   client.setSpendControls({
     maxAmountPerPayment: '$0.01',
@@ -113,8 +127,8 @@ export function createBasePaidFetch(target: ProbeTarget): typeof fetch {
   });
   client.onAfterPaymentCreation(async ({ selectedRequirements }) => {
     const requirement = selectedRequirements as PaymentRequirementLike;
-    const rawAmount = requirement.amount ?? requirement.maxAmountRequired;
-    selectedAmount = rawAmount && /^\d+$/.test(rawAmount) ? BigInt(rawAmount) : 0n;
+    selectedAmount = requirementAmount(requirement) ?? 0n;
+    if (selectedAmount > 0n) budget.record(selectedAmount);
   });
 
   const paidFetch = wrapFetchWithPayment(globalThis.fetch, client);
@@ -124,6 +138,9 @@ export function createBasePaidFetch(target: ProbeTarget): typeof fetch {
     if (selectedAmount === 0n) return response;
     const headers = new Headers(response.headers);
     headers.set('x-agentindex-payment-amount', selectedAmount.toString());
+    const spend = budget.snapshot();
+    headers.set('x-agentindex-round-spend', spend.roundSpentAtomic.toString());
+    headers.set('x-agentindex-daily-spend', spend.dailySpentAtomic.toString());
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
@@ -138,12 +155,14 @@ export function createBasePaidFetch(target: ProbeTarget): typeof fetch {
 export function createPaidFetchRouter(): (target: ProbeTarget) => typeof fetch {
   let hederaFetch: typeof fetch | undefined;
   let baseFetch: typeof fetch | undefined;
+  let baseBudget: BaseSpendBudget | undefined;
 
   return (target) => {
     if (process.env.PAYWALL === 'off') return globalThis.fetch;
     if (target.source === 'external') {
       assertSafeExternalTarget(target);
-      baseFetch ??= createBasePaidFetch(target);
+      baseBudget ??= createBaseSpendBudget();
+      baseFetch ??= createBasePaidFetch(target, baseBudget);
       return baseFetch;
     }
     hederaFetch ??= createPaidFetch();

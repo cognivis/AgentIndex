@@ -9,6 +9,7 @@ export interface ProbeResult {
   body: string;
   paymentRef: string;
   amountPaid: bigint;
+  baseSpend?: { roundAtomic: bigint; dailyAtomic: bigint };
   oracleCheck?: OracleCheck;
 }
 
@@ -22,6 +23,7 @@ export async function probeOne(
   let body = '';
   let paymentRef = '';
   let amountPaid = 0n;
+  let baseSpend: ProbeResult['baseSpend'];
 
   try {
     const res = await paidFetch(target.url, {
@@ -35,6 +37,11 @@ export async function probeOne(
     const receipt = extractPaymentReceipt(res.headers);
     paymentRef = receipt.reference;
     amountPaid = receipt.amount;
+    const roundSpend = res.headers.get('x-agentindex-round-spend');
+    const dailySpend = res.headers.get('x-agentindex-daily-spend');
+    if (roundSpend && dailySpend && /^\d+$/.test(roundSpend) && /^\d+$/.test(dailySpend)) {
+      baseSpend = { roundAtomic: BigInt(roundSpend), dailyAtomic: BigInt(dailySpend) };
+    }
     if (paymentRef && target.network === 'eip155:8453') paymentRef = `base:${paymentRef}`;
     if (!paymentRef) amountPaid = 0n;
   } catch {
@@ -58,5 +65,5 @@ export async function probeOne(
     }
   }
 
-  return { target, outcome, specHonest, body, paymentRef, amountPaid, oracleCheck };
+  return { target, outcome, specHonest, body, paymentRef, amountPaid, baseSpend, oracleCheck };
 }
