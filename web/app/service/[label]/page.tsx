@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { loadService, bps, ago } from '../../../lib/data';
 import { VerdictChip, ScoreMeter, Freshness, paymentReceipt, etherscan } from '../../../components/bits';
 import ProbeTimeline from '../../../components/probe-timeline';
+import { ExternalEvidenceCard } from '../../../components/external-evidence';
+import { externalEvidenceFor } from '../../../lib/external-evidence';
 
 export const revalidate = 15;
 
@@ -23,6 +25,11 @@ export default async function ServicePage({ params }: { params: Promise<{ label:
       </div>
     );
   }
+
+  const externalEvidence = externalEvidenceFor(service.label, service.probes);
+  const evidenceProbe = externalEvidence
+    ? service.probes.find((probe) => probe.paymentRef === externalEvidence.paymentRef)
+    : null;
 
   return (
     <div className="wrap">
@@ -53,6 +60,10 @@ export default async function ServicePage({ params }: { params: Promise<{ label:
         <p className="num-bad">Delisted: {service.delistReason ?? 'no reason recorded'}</p>
       )}
       <p className="dim">{service.verdict.reasons.join(' · ')}</p>
+
+      {externalEvidence && evidenceProbe && (
+        <ExternalEvidenceCard evidence={externalEvidence} attestationTx={evidenceProbe.txHash} />
+      )}
 
       <div className="tiles">
         <div className="tile">

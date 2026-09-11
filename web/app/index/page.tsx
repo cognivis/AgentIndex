@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { loadOverview, bps, ago } from '../../lib/data';
 import { VerdictChip, ScoreMeter, Freshness, paymentReceipt, etherscan } from '../../components/bits';
+import { ExternalEvidenceBadges } from '../../components/external-evidence';
+import { externalEvidenceFor } from '../../lib/external-evidence';
 
 // This is a live evidence view backed by the subgraph. Rendering per request
 // also avoids baking stale trust data into a deployment artifact.
@@ -10,7 +12,7 @@ export const dynamic = 'force-dynamic';
 // probes and their on-chain receipts. Moved off `/` so the Playground can
 // lead; this page is where a skeptic comes to check our work.
 export default async function IndexPage() {
-  const { services, stats, feed, meta } = await loadOverview();
+  const { services, stats, feed, verifiedExternalProbes, meta } = await loadOverview();
   const active = services.filter((s) => !s.delisted);
 
   return (
@@ -61,12 +63,18 @@ export default async function IndexPage() {
           </tr>
         </thead>
         <tbody>
-          {services.map((s) => (
+          {services.map((s) => {
+            const evidence = externalEvidenceFor(
+              s.label,
+              verifiedExternalProbes.filter((probe) => probe.service.label === s.label),
+            );
+            return (
             <tr key={s.id} className="rowlink">
               <td className="svc">
                 <Link href={`/service/${s.label}`}>
                   {s.label}
                   <div className="ens">{s.ensName}</div>
+                  {evidence && <ExternalEvidenceBadges evidence={evidence} />}
                 </Link>
               </td>
               <td>
@@ -84,15 +92,21 @@ export default async function IndexPage() {
                 <VerdictChip verdict={s.verdict} />
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
 
       <h2>Live probe feed</h2>
       <div className="feed">
-        {feed.map((p, i) => (
+        {feed.map((p, i) => {
+          const evidence = externalEvidenceFor(p.service.label, [p]);
+          return (
           <div className="row" key={i}>
-            <div className="svc">{p.service.label}</div>
+            <div className="svc">
+              {p.service.label}
+              {evidence && <ExternalEvidenceBadges evidence={evidence} />}
+            </div>
             <div>
               {p.delivered ? (
                 p.honest ? (
@@ -120,7 +134,8 @@ export default async function IndexPage() {
               </a>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <footer className="site">

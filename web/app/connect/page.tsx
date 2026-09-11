@@ -12,6 +12,8 @@ export const metadata: Metadata = {
 const REGISTRAR =
   'https://sepolia.etherscan.io/address/0xdeB458892c7702Fe0112161EEa28C0F46eFd6379';
 const REPO = 'https://github.com/cognivis/AgentIndex';
+const REMOTE_MCP_URL = process.env.NEXT_PUBLIC_MCP_URL ?? 'https://<your-mcp-host>/mcp';
+const MCP_INSTALL = `npx add-mcp ${REMOTE_MCP_URL}`;
 
 const MCP_CONFIG = `{
   "mcpServers": {
@@ -51,7 +53,7 @@ export default function ConnectPage() {
         </div>
         <div className={styles.body}>
           <p>
-            AgentIndex ships a Model Context Protocol server exposing three
+            AgentIndex ships a Model Context Protocol server exposing four
             tools. Any MCP client — Claude Code, Claude Desktop, Cursor — can
             call them. They read the on-chain trust index (subgraph + ENS) and
             need no payment.
@@ -60,9 +62,18 @@ export default function ConnectPage() {
             <li>find_service</li>
             <li>check_trust</li>
             <li>resolve_data_need</li>
+            <li>get_verified_data</li>
           </ul>
 
-          <p className={styles.blockLabel}>Add to your <code>.mcp.json</code>:</p>
+          <p className={styles.blockLabel}>Connect to the hosted Streamable HTTP server:</p>
+          <div className={styles.codeBlock}>
+            <CopyButton text={MCP_INSTALL} label="Copy install command" />
+            <pre>
+              <code>{MCP_INSTALL}</code>
+            </pre>
+          </div>
+
+          <p className={styles.blockLabel}>Or run it locally over stdio in <code>.mcp.json</code>:</p>
           <div className={styles.codeBlock}>
             <CopyButton text={MCP_CONFIG} label="Copy MCP config" />
             <pre>

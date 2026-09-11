@@ -226,6 +226,88 @@ tr.rowlink:hover td {
 .chip.trusted {
   color: var(--status-good);
 }
+
+.external-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.external-badge {
+  width: fit-content;
+  border: 1px solid rgba(58, 203, 126, 0.42);
+  border-radius: 999px;
+  color: var(--status-good);
+  font: 700 10px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: 0.03em;
+  padding: 4px 7px;
+  text-transform: uppercase;
+}
+
+.external-badge.graph {
+  border-color: rgba(115, 92, 255, 0.5);
+  color: #a99cff;
+}
+
+.external-badge.neutral {
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+.external-evidence-card {
+  background: linear-gradient(135deg, rgba(115, 92, 255, 0.09), rgba(58, 203, 126, 0.05));
+  border: 1px solid rgba(115, 92, 255, 0.38);
+  border-radius: 10px;
+  margin: 20px 0 0;
+  padding: 20px;
+}
+
+.external-evidence-card h2 {
+  font-size: 17px;
+  margin: 6px 0 10px;
+}
+
+.external-evidence-card dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0 12px;
+}
+
+.external-evidence-card dl div {
+  border-left: 2px solid rgba(115, 92, 255, 0.45);
+  padding-left: 10px;
+}
+
+.external-evidence-card dt {
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+
+.external-evidence-card dd {
+  font-size: 13px;
+  margin: 0;
+}
+
+.external-evidence-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.external-evidence-links a {
+  color: var(--seq);
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .external-evidence-card dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .chip.caution {
   color: var(--status-warning);
 }

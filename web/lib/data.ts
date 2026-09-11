@@ -38,6 +38,7 @@ export interface Overview {
   services: (ServiceRow & { verdict: Verdict })[];
   stats: { serviceCount: string; activeServiceCount: string; probeCount: string; lastProbeAt: string } | null;
   feed: FeedProbe[];
+  verifiedExternalProbes: FeedProbe[];
   meta: Meta;
 }
 
@@ -46,11 +47,19 @@ export async function loadOverview(): Promise<Overview> {
     services: ServiceRow[];
     indexStats: Overview['stats'];
     probes: FeedProbe[];
+    verifiedExternalProbes: FeedProbe[];
     _meta: Meta;
   }>(`{
     services(orderBy: trustScoreBps, orderDirection: desc, where: { label_not: "" }) { ${SERVICE_FIELDS} }
     indexStats(id: "global") { serviceCount activeServiceCount probeCount lastProbeAt }
     probes(first: 18, orderBy: timestamp, orderDirection: desc, where: { valid: true }) {
+      delivered honest latencyMs paymentRef timestamp txHash valid invalidReason
+      service { label }
+    }
+    verifiedExternalProbes: probes(first: 5, where: {
+      valid: true,
+      paymentRef: "base:0xac1531426573cd9a72e890dc386c664411c36feb5b31f8d83e717aa46f8f713d"
+    }) {
       delivered honest latencyMs paymentRef timestamp txHash valid invalidReason
       service { label }
     }
@@ -61,6 +70,7 @@ export async function loadOverview(): Promise<Overview> {
     services: data.services.map((s) => ({ ...s, verdict: assess(s) })),
     stats: data.indexStats,
     feed: data.probes,
+    verifiedExternalProbes: data.verifiedExternalProbes,
     meta: data._meta,
   };
 }

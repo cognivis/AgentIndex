@@ -1,6 +1,6 @@
 {
   "name": "@agentindex/mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "bin": {
@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "tsx src/index.ts",
+    "http": "tsx src/http.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
