@@ -29,8 +29,8 @@ type Service @entity(immutable: false) {
   probes: [Probe!]! @derivedFrom(field: "service")
 }
 
-# One paid probe: the payment happened on Hedera (paymentRef), the
-# verification result lives here.
+# One paid probe. paymentRef is chain-qualified for non-Hedera rails (for
+# example `base:0x...`); legacy Hedera references retain their native format.
 type Probe @entity(immutable: true) {
   id: Bytes! # tx hash + log index
   service: Service!
@@ -44,6 +44,10 @@ type Probe @entity(immutable: true) {
   timestamp: BigInt!
   block: BigInt!
   txHash: Bytes!
+  # Invalid auditor configurations remain indexed for transparency but do not
+  # affect service scores (for example probing the wrong path parameter).
+  valid: Boolean!
+  invalidReason: String
 }
 
 # Running totals for the whole index, singleton id "global"

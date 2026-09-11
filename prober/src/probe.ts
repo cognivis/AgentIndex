@@ -1,11 +1,14 @@
 import type { ProbeTarget } from './discovery.js';
-import { verifyResponse, extractPaymentRef, type ProbeOutcome } from './verify.js';
+import { verifyResponse, extractPaymentReceipt, type ProbeOutcome } from './verify.js';
 import type { Oracle, OracleCheck } from './oracle.js';
 
 export interface ProbeResult {
   target: ProbeTarget;
   outcome: ProbeOutcome;
+  specHonest: boolean;
+  body: string;
   paymentRef: string;
+  amountPaid: bigint;
   oracleCheck?: OracleCheck;
 }
 
@@ -18,6 +21,7 @@ export async function probeOne(
   let status = 0;
   let body = '';
   let paymentRef = '';
+  let amountPaid = 0n;
 
   try {
     const res = await paidFetch(target.url, {
@@ -28,13 +32,18 @@ export async function probeOne(
     });
     status = res.status;
     body = await res.text();
-    paymentRef = extractPaymentRef(res.headers);
+    const receipt = extractPaymentReceipt(res.headers);
+    paymentRef = receipt.reference;
+    amountPaid = receipt.amount;
+    if (paymentRef && target.network === 'eip155:8453') paymentRef = `base:${paymentRef}`;
+    if (!paymentRef) amountPaid = 0n;
   } catch {
     // timeouts and refused connections count as non-delivery
   }
 
   const latencyMs = Date.now() - started;
   let outcome = verifyResponse({ status, body, latencyMs }, target.requiredFields);
+  const specHonest = outcome.honest;
 
   // Objective-data services get a second, harder test: is the number actually
   // right? Cross-check the claimed price against The Graph oracle. A feed that
@@ -49,5 +58,5 @@ export async function probeOne(
     }
   }
 
-  return { target, outcome, paymentRef, oracleCheck };
+  return { target, outcome, specHonest, body, paymentRef, amountPaid, oracleCheck };
 }

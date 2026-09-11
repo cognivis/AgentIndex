@@ -60,10 +60,10 @@ const stages: Stage[] = [
     desc: <>The Graph indexes every attestation and computes each service&apos;s trust score.</>,
     sponsor: 'The Graph',
     link: {
-      href: 'https://api.studio.thegraph.com/query/1759003/agentindex-sepolia/v0.0.1',
+      href: 'https://api.studio.thegraph.com/query/1759003/agentindex-sepolia/v0.0.3',
       label: 'subgraph endpoint ↗',
     },
-    deploy: 'QmStXteiGmMiigj5NCUjCvt6PLhUaHqnYH7fpH9gPQJKyF',
+    deploy: 'QmXxckRjUGcYCJgVEeD38GYEKnybGDapfA9ZgWKM2iuQgs',
   },
   {
     n: 5,

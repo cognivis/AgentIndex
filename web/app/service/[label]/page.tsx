@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { loadService, bps, ago } from '../../../lib/data';
-import { VerdictChip, ScoreMeter, Freshness, hashscan, etherscan } from '../../../components/bits';
+import { VerdictChip, ScoreMeter, Freshness, paymentReceipt, etherscan } from '../../../components/bits';
 import ProbeTimeline from '../../../components/probe-timeline';
 
 export const revalidate = 15;
@@ -167,7 +167,7 @@ export default async function ServicePage({ params }: { params: Promise<{ label:
             <th>When</th>
             <th>Result</th>
             <th>Latency</th>
-            <th>Hedera payment</th>
+            <th>x402 payment</th>
             <th>Attestation</th>
           </tr>
         </thead>
@@ -188,13 +188,14 @@ export default async function ServicePage({ params }: { params: Promise<{ label:
               </td>
               <td className="dim">{Number(p.latencyMs).toLocaleString()}ms</td>
               <td>
-                {p.paymentRef ? (
-                  <a className="ref" href={hashscan(p.paymentRef)} target="_blank" style={{ color: 'var(--seq)', fontSize: 12 }}>
-                    {p.paymentRef.slice(0, 28)}… ↗
-                  </a>
-                ) : (
-                  <span className="dim">—</span>
-                )}
+                {p.paymentRef ? (() => {
+                  const payment = paymentReceipt(p.paymentRef);
+                  return (
+                    <a className="ref" href={payment.url} target="_blank" style={{ color: 'var(--seq)', fontSize: 12 }}>
+                      {payment.network} · {payment.id.slice(0, 18)}… ↗
+                    </a>
+                  );
+                })() : <span className="dim">—</span>}
               </td>
               <td>
                 <a className="ref" href={etherscan(p.txHash)} target="_blank" style={{ color: 'var(--seq)', fontSize: 12 }}>

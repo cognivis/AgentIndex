@@ -1,5 +1,7 @@
 # internal
-PLAN.md
+AGENTS.md
+*PLAN*.md
+SUBMISSION.md
 
 # deps
 node_modules/
@@ -29,4 +31,3 @@ dist/
 *.log
 .DS_Store
 *.tsbuildinfo
-BUILD_PLAN.md

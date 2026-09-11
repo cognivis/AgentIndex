@@ -20,6 +20,7 @@ const DIRECTORY_TIMEOUT_MS = 8_000;
 interface FeedAdapter {
   slug: string; // x402-list.com slug, for enrichment + provenance
   symbol: string; // asset the feed reports, uppercased ticker
+  path?: string; // explicit parameterized path when directory examples are not semantic IDs
   // dot-path to the numeric USD price in the response body; the oracle reads it
   pricePath: string;
   // response keys we require to call the shape "delivered as promised"
@@ -29,16 +30,21 @@ interface FeedAdapter {
 const CURATED: FeedAdapter[] = [
   // TickersFeed — Finance, GET /crypto/1, $0.002 USDC on Base, 100% uptime (grade A).
   // The single real feed we pay for real (item 1h). pricePath/requiredFields are
-  // best-effort until first paid read confirms the exact shape; the oracle treats
-  // a missing path as "can't verify", never as "dishonest", so a wrong guess here
-  // downgrades to verify-light rather than falsely accusing the feed.
-  { slug: 'tickersfeed', symbol: 'BTC', pricePath: 'price', requiredFields: ['price'] },
+  // The live x402 v2 schema advertises this response shape:
+  // { symbol, name, market: { price_usd, ... } }.
+  {
+    slug: 'tickersfeed',
+    symbol: 'BTC',
+    path: '/crypto/BTC',
+    pricePath: 'market.price_usd',
+    requiredFields: ['symbol', 'name', 'market'],
+  },
 ];
 
 interface DirectoryPricing {
   network_caip2?: string;
   asset_address?: string;
-  price_usd?: number;
+  price_usd?: number | string;
   pay_to?: string;
 }
 interface DirectoryEndpoint {
@@ -52,6 +58,10 @@ interface DirectoryDetail {
   category?: string;
   base_url?: string;
   endpoints?: DirectoryEndpoint[];
+}
+
+interface DirectoryResponse {
+  data?: DirectoryDetail;
 }
 
 async function fetchJson<T>(url: string): Promise<T | null> {
@@ -72,9 +82,10 @@ async function fetchJson<T>(url: string): Promise<T | null> {
 // endpoint path from the directory. If enrichment fails we skip the feed rather
 // than probe a guessed URL.
 async function toTarget(feed: FeedAdapter): Promise<ProbeTarget | null> {
-  const detail = await fetchJson<DirectoryDetail>(
+  const response = await fetchJson<DirectoryResponse | DirectoryDetail>(
     `${DIRECTORY_BASE}/api/v1/services/${feed.slug}`,
   );
+  const detail = (response as DirectoryResponse | null)?.data ?? (response as DirectoryDetail | null);
   if (!detail?.base_url) return null;
 
   // prefer a GET endpoint (cheap to probe); else take the first
@@ -82,8 +93,9 @@ async function toTarget(feed: FeedAdapter): Promise<ProbeTarget | null> {
   const ep = endpoints.find((e) => (e.method ?? 'GET').toUpperCase() === 'GET') ?? endpoints[0];
   if (!ep?.path) return null;
 
-  const pricing = ep.pricing?.[0];
-  const url = `${detail.base_url.replace(/\/$/, '')}${ep.path}`;
+  const pricing = ep.pricing?.find((p) => p.network_caip2 === 'eip155:8453') ?? ep.pricing?.[0];
+  const url = `${detail.base_url.replace(/\/$/, '')}${feed.path ?? ep.path}`;
+  const priceUsd = Number(pricing?.price_usd);
 
   return {
     label: `ext:${feed.slug}`,
@@ -95,7 +107,8 @@ async function toTarget(feed: FeedAdapter): Promise<ProbeTarget | null> {
     symbol: feed.symbol,
     pricePath: feed.pricePath,
     network: pricing?.network_caip2,
-    priceUsd: pricing?.price_usd,
+    priceUsd: Number.isFinite(priceUsd) ? priceUsd : undefined,
+    asset: pricing?.asset_address,
     slug: feed.slug,
   };
 }

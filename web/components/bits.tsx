@@ -40,3 +40,11 @@ export function Freshness({ block, timestamp }: { block: number; timestamp: numb
 
 export const hashscan = (ref: string) => `https://hashscan.io/testnet/transaction/${ref}`;
 export const etherscan = (tx: string) => `https://sepolia.etherscan.io/tx/${tx}`;
+
+export function paymentReceipt(ref: string): { network: 'base' | 'hedera'; url: string; id: string; label: string } {
+  if (ref.startsWith('base:')) {
+    const id = ref.slice('base:'.length);
+    return { network: 'base', id, label: 'Base payment', url: `https://basescan.org/tx/${id}` };
+  }
+  return { network: 'hedera', id: ref, label: 'Hedera payment', url: hashscan(ref) };
+}

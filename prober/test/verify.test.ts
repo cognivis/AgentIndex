@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { verifyResponse, extractPaymentRef } from '../src/verify.js';
+import { verifyResponse, extractPaymentRef, extractPaymentReceipt } from '../src/verify.js';
 
 const WEATHER_FIELDS = ['city', 'tempC', 'conditions', 'humidity', 'observedAt'];
 
@@ -79,5 +79,31 @@ describe('extractPaymentRef', () => {
   it('returns empty string when absent or malformed', () => {
     expect(extractPaymentRef(new Headers())).toBe('');
     expect(extractPaymentRef(new Headers({ 'PAYMENT-RESPONSE': '!!!not-base64-json' }))).toBe('');
+  });
+
+  it('extracts optional amount and network without guessing missing values', () => {
+    const payload = Buffer.from(
+      JSON.stringify({ transaction: '0xabc', amount: '2000', network: 'eip155:8453' }),
+    ).toString('base64');
+    expect(extractPaymentReceipt(new Headers({ 'PAYMENT-RESPONSE': payload }))).toEqual({
+      reference: '0xabc',
+      amount: 2000n,
+      network: 'eip155:8453',
+    });
+    expect(extractPaymentReceipt(new Headers())).toEqual({ reference: '', amount: 0n, network: '' });
+  });
+
+  it('uses the locally captured selected amount when exact settlement omits it', () => {
+    const payload = Buffer.from(
+      JSON.stringify({ transaction: '0xdef', network: 'eip155:8453' }),
+    ).toString('base64');
+    expect(
+      extractPaymentReceipt(
+        new Headers({
+          'PAYMENT-RESPONSE': payload,
+          'X-AGENTINDEX-PAYMENT-AMOUNT': '2000',
+        }),
+      ),
+    ).toEqual({ reference: '0xdef', amount: 2000n, network: 'eip155:8453' });
   });
 });

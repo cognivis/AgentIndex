@@ -21,6 +21,23 @@ function reply(payload: unknown) {
   return { content: [{ type: 'text' as const, text: JSON.stringify(payload, null, 2) }] };
 }
 
+function paymentProof(paymentRef: string) {
+  if (!paymentRef) return { paymentReceipt: '', paymentNetwork: null, paymentExplorer: null };
+  if (paymentRef.startsWith('base:')) {
+    const txHash = paymentRef.slice('base:'.length);
+    return {
+      paymentReceipt: txHash,
+      paymentNetwork: 'base',
+      paymentExplorer: `https://basescan.org/tx/${txHash}`,
+    };
+  }
+  return {
+    paymentReceipt: paymentRef,
+    paymentNetwork: 'hedera',
+    paymentExplorer: `https://hashscan.io/testnet/transaction/${paymentRef}`,
+  };
+}
+
 async function loadCandidates(): Promise<{ candidates: Candidate[]; meta: Parameters<typeof freshness>[0] }> {
   const { services, meta } = await subgraph.services();
   const active = services.filter((s) => !s.delisted && s.label !== '');
@@ -57,7 +74,7 @@ server.registerTool(
   'check_trust',
   {
     description:
-      'Full trust report for one service: score, delivery/honesty rates, latency, and recent probes with their Hedera payment receipts. Accepts a label ("weatherpro") or full name ("weatherpro.agentindex.eth").',
+      'Full trust report for one service: score, delivery/honesty rates, latency, and recent probes with chain-aware payment receipts. Accepts a label ("weatherpro") or full name ("weatherpro.agentindex.eth").',
     inputSchema: {
       name: z.string().describe('Service label or ENS name'),
       probes: z.number().int().min(1).max(50).default(10).describe('How many recent probes to include'),
@@ -76,7 +93,7 @@ server.registerTool(
         delivered: p.delivered,
         honest: p.honest,
         latencyMs: Number(p.latencyMs),
-        hederaPayment: p.paymentRef,
+        ...paymentProof(p.paymentRef),
         attestationTx: p.txHash,
         at: new Date(Number(p.timestamp) * 1000).toISOString(),
       })),
@@ -186,7 +203,7 @@ server.registerTool(
       ? {
           delivered: latest.delivered,
           honest: latest.honest,
-          hederaPayment: latest.paymentRef,
+          ...paymentProof(latest.paymentRef),
           attestationTx: latest.txHash,
           at: new Date(Number(latest.timestamp) * 1000).toISOString(),
         }

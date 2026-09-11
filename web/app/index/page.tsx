@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { loadOverview, bps, ago } from '../../lib/data';
-import { VerdictChip, ScoreMeter, Freshness, hashscan, etherscan } from '../../components/bits';
+import { VerdictChip, ScoreMeter, Freshness, paymentReceipt, etherscan } from '../../components/bits';
 
-export const revalidate = 15;
+// This is a live evidence view backed by the subgraph. Rendering per request
+// also avoids baking stale trust data into a deployment artifact.
+export const dynamic = 'force-dynamic';
 
 // The Evidence: every verdict on the site traces back to these real paid
 // probes and their on-chain receipts. Moved off `/` so the Playground can
@@ -105,13 +107,14 @@ export default async function IndexPage() {
             <div className="dim">{Number(p.latencyMs).toLocaleString()}ms</div>
             <div className="dim">{ago(Number(p.timestamp))}</div>
             <div>
-              {p.paymentRef ? (
-                <a className="ref" href={hashscan(p.paymentRef)} target="_blank">
-                  payment ↗
-                </a>
-              ) : (
-                <span className="dim">—</span>
-              )}{' '}
+              {p.paymentRef ? (() => {
+                const payment = paymentReceipt(p.paymentRef);
+                return (
+                  <a className="ref" href={payment.url} target="_blank">
+                    {payment.label} ↗
+                  </a>
+                );
+              })() : <span className="dim">—</span>}{' '}
               <a className="ref" href={etherscan(p.txHash)} target="_blank">
                 attest ↗
               </a>

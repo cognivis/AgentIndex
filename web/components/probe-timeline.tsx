@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { ProbeRow } from '../../mcp/src/subgraph';
-import { hashscan, etherscan } from './bits';
+import { paymentReceipt, etherscan } from './bits';
 import styles from './probe-timeline.module.css';
 
 type Outcome = 'good' | 'junk' | 'nodelivery';
@@ -137,11 +137,14 @@ export default function ProbeTimeline({ probes }: { probes: ProbeRow[] }) {
                 {ago(ts)} · {new Date(ts * 1000).toLocaleString()}
               </div>
               <div className={styles.ttLinks}>
-                {p.paymentRef && (
-                  <a href={hashscan(p.paymentRef)} target="_blank" rel="noreferrer">
-                    Hedera payment ↗
-                  </a>
-                )}
+                {p.paymentRef && (() => {
+                  const payment = paymentReceipt(p.paymentRef);
+                  return (
+                    <a href={payment.url} target="_blank" rel="noreferrer">
+                      {payment.label} ↗
+                    </a>
+                  );
+                })()}
                 {p.txHash && (
                   <a href={etherscan(p.txHash)} target="_blank" rel="noreferrer">
                     Sepolia attestation ↗

@@ -5,9 +5,9 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title AttestationRegistry
 /// @notice On-chain track record for x402 services. Whitelisted probers pay
-///         services out-of-band (x402 on Hedera), then attest the outcome here.
-///         Each attestation carries the Hedera payment reference so every probe
-///         is auditable back to a real payment.
+///         services out-of-band (x402), then attest the outcome here. Each
+///         attestation carries a chain-qualified payment reference so every
+///         probe is auditable back to a real payment.
 contract AttestationRegistry is Ownable {
     struct ServiceStats {
         uint64 probeCount;
@@ -60,7 +60,7 @@ contract AttestationRegistry is Ownable {
     /// @param latencyMs round-trip time of the paid request
     /// @param responseHash keccak256 of the raw response body
     /// @param amountPaid amount paid for the probe, in the service's quoted token
-    /// @param paymentRef Hedera transaction id of the x402 payment
+    /// @param paymentRef payment transaction id/hash (chain-qualified when needed)
     function attest(
         bytes32 node,
         bool delivered,

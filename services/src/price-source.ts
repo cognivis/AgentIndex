@@ -1,7 +1,9 @@
 // Real market prices from The Graph's Token API (served by Pinax). This makes
 // `pricefeed` a genuine service backed by live Graph data — The Graph is a real
 // INPUT to the index, not canned data. Price is exposed as DEX pool OHLC; we read
-// the latest daily candle for a curated USDC pool per symbol.
+// the latest hourly candle for a curated USDC pool per symbol. The prober oracle
+// uses the same interval so the service and verifier cannot disagree merely due
+// to mismatched candle windows.
 // See memory graph-token-api-config for endpoint details.
 const BASE = process.env.TOKEN_API_BASE ?? 'https://api.pinax.network';
 const NETWORK = process.env.TOKEN_API_NETWORK ?? 'mainnet';
@@ -17,7 +19,7 @@ const POOLS: Record<string, string> = {
 export interface PriceQuote {
   symbol: string;
   priceUsd: number;
-  change24h: number; // % change over the current day's candle
+  change24h: number; // compatibility field; % change over the latest oracle candle
   source: string;
   asOf: string;
 }
@@ -37,7 +39,7 @@ export async function fetchPrice(symbol: string): Promise<PriceQuote | null> {
   const pool = POOLS[sym];
   if (!jwt || !pool) return null;
 
-  const url = `${BASE}/v1/evm/pools/ohlc?network=${NETWORK}&pool=${pool}&interval=1d&limit=1`;
+  const url = `${BASE}/v1/evm/pools/ohlc?network=${NETWORK}&pool=${pool}&interval=1h&limit=1`;
   try {
     const res = await fetch(url, {
       headers: { Accept: 'application/json', Authorization: `Bearer ${jwt}` },

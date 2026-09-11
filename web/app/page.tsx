@@ -48,7 +48,8 @@ interface Receipt {
   paymentRef: string;
   txHash: string;
   timestamp: number;
-  hashscanUrl: string | null;
+  paymentNetwork: 'base' | 'hedera' | null;
+  paymentUrl: string | null;
   etherscanUrl: string;
 }
 
@@ -368,9 +369,9 @@ function ReceiptRow({ receipt }: { receipt: Receipt }) {
       </span>
       <span className={`dim ${styles.receiptLatency}`}>{receipt.latencyMs.toLocaleString()}ms</span>
       <span className={styles.receiptLinks}>
-        {receipt.hashscanUrl && (
-          <a href={receipt.hashscanUrl} target="_blank" rel="noopener noreferrer">
-            payment ↗
+        {receipt.paymentUrl && (
+          <a href={receipt.paymentUrl} target="_blank" rel="noopener noreferrer">
+            {receipt.paymentNetwork} payment ↗
           </a>
         )}
         <a href={receipt.etherscanUrl} target="_blank" rel="noopener noreferrer">

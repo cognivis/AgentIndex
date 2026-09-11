@@ -9,7 +9,7 @@ import type { ServiceRow, ProbeRow, Meta } from '../../mcp/src/subgraph';
 
 const SUBGRAPH_URL =
   process.env.SUBGRAPH_QUERY_URL ??
-  'https://api.studio.thegraph.com/query/1759003/agentindex-sepolia/v0.0.1';
+  'https://api.studio.thegraph.com/query/1759003/agentindex-sepolia/v0.0.3';
 
 const SERVICE_FIELDS = `
   id label ensName owner expiry delisted delistReason
@@ -50,8 +50,8 @@ export async function loadOverview(): Promise<Overview> {
   }>(`{
     services(orderBy: trustScoreBps, orderDirection: desc, where: { label_not: "" }) { ${SERVICE_FIELDS} }
     indexStats(id: "global") { serviceCount activeServiceCount probeCount lastProbeAt }
-    probes(first: 18, orderBy: timestamp, orderDirection: desc) {
-      delivered honest latencyMs paymentRef timestamp txHash
+    probes(first: 18, orderBy: timestamp, orderDirection: desc, where: { valid: true }) {
+      delivered honest latencyMs paymentRef timestamp txHash valid invalidReason
       service { label }
     }
     _meta { deployment block { number timestamp } }
@@ -107,8 +107,8 @@ export async function loadService(label: string): Promise<ServiceDetail> {
     `query ($label: String!) {
       services(where: { label: $label }) {
         ${SERVICE_FIELDS}
-        probes(first: 40, orderBy: timestamp, orderDirection: desc) {
-          delivered honest latencyMs paymentRef timestamp txHash
+        probes(first: 40, orderBy: timestamp, orderDirection: desc, where: { valid: true }) {
+          delivered honest latencyMs paymentRef timestamp txHash valid invalidReason
         }
       }
       _meta { deployment block { number timestamp } }
@@ -189,7 +189,10 @@ export async function checkTrust(name: string) {
       delivered: p.delivered,
       honest: p.honest,
       latencyMs: Number(p.latencyMs),
-      hederaPayment: p.paymentRef,
+      paymentReceipt: p.paymentRef.startsWith('base:')
+        ? p.paymentRef.slice('base:'.length)
+        : p.paymentRef,
+      paymentNetwork: p.paymentRef ? (p.paymentRef.startsWith('base:') ? 'base' : 'hedera') : null,
       attestationTx: p.txHash,
       at: new Date(Number(p.timestamp) * 1000).toISOString(),
     })),
@@ -204,7 +207,8 @@ export interface Receipt {
   paymentRef: string;
   txHash: string;
   timestamp: number;
-  hashscanUrl: string | null;
+  paymentNetwork: 'base' | 'hedera' | null;
+  paymentUrl: string | null;
   etherscanUrl: string;
 }
 
@@ -226,7 +230,12 @@ export async function loadReceipts(label: string, limit = 6): Promise<{ label: s
       paymentRef: p.paymentRef,
       txHash: p.txHash,
       timestamp: Number(p.timestamp),
-      hashscanUrl: p.paymentRef ? `https://hashscan.io/testnet/transaction/${p.paymentRef}` : null,
+      paymentNetwork: p.paymentRef ? (p.paymentRef.startsWith('base:') ? 'base' : 'hedera') : null,
+      paymentUrl: p.paymentRef
+        ? p.paymentRef.startsWith('base:')
+          ? `https://basescan.org/tx/${p.paymentRef.slice('base:'.length)}`
+          : `https://hashscan.io/testnet/transaction/${p.paymentRef}`
+        : null,
       etherscanUrl: `https://sepolia.etherscan.io/tx/${p.txHash}`,
     }));
   return { label, receipts, _meta: freshness(meta) };

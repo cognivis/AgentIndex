@@ -26,6 +26,8 @@ export interface ProbeRow {
   paymentRef: string;
   timestamp: string;
   txHash: string;
+  valid: boolean;
+  invalidReason: string | null;
 }
 
 export interface Meta {
@@ -77,8 +79,8 @@ export function createSubgraphClient(url = process.env.SUBGRAPH_QUERY_URL): Subg
         `query ($label: String!, $n: Int!) {
           services(where: { label: $label }) {
             ${SERVICE_FIELDS}
-            probes(first: $n, orderBy: timestamp, orderDirection: desc) {
-              delivered honest latencyMs paymentRef timestamp txHash
+            probes(first: $n, orderBy: timestamp, orderDirection: desc, where: { valid: true }) {
+              delivered honest latencyMs paymentRef timestamp txHash valid invalidReason
             }
           }
           ${META}

@@ -29,21 +29,23 @@ export interface ProbeTarget {
   // directory metadata for external services
   network?: string; // caip2, e.g. "eip155:8453" (Base)
   priceUsd?: number; // advertised per-call price
+  asset?: string; // on-chain payment asset advertised by the directory
   slug?: string;
 }
 
 // price-feed metadata per known label: which symbol the sample input asks for
 // and where the price sits in the response, so the oracle can cross-check it.
-// Our own pricefeed reports `priceUsd` and is queried with symbol=ETH.
+// Our own pricefeed reports `priceUsd`. Probe BTC so it can form a same-symbol
+// comparison set with the curated external TickersFeed endpoint.
 const PRICE_META: Record<string, { symbol: string; pricePath: string }> = {
-  pricefeed: { symbol: 'ETH', pricePath: 'priceUsd' },
+  pricefeed: { symbol: 'BTC', pricePath: 'priceUsd' },
 };
 
 // sample inputs per known label; unknown services get probed bare
 const SAMPLE_INPUTS: Record<string, { query?: string; body?: unknown }> = {
   weatherpro: { query: 'city=singapore' },
   scamco: { query: 'city=singapore' },
-  pricefeed: { query: 'symbol=ETH' },
+  pricefeed: { query: 'symbol=BTC' },
   geocode: { query: 'q=singapore' },
   newsfeed: { query: 'topic=crypto' },
   summarize: {
