@@ -8,7 +8,7 @@ import { ExternalEvidenceCard } from '../components/external-evidence';
 import { TICKERSFEED_EVIDENCE } from '../lib/external-evidence';
 
 const TICKERSFEED_ATTESTATION =
-  '0x73319fc4644ef28d2e1063d260a39452102d766e56ffeb6bad0bb853c0c7a863';
+  '0x46e28ead4fefff5eb67d908d1354e703c737702b4d781a324f7ecb013fc11d80';
 
 const TRUST_STAGES = [
   {

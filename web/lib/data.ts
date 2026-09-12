@@ -58,7 +58,7 @@ export async function loadOverview(): Promise<Overview> {
     }
     verifiedExternalProbes: probes(first: 5, where: {
       valid: true,
-      paymentRef: "base:0xac1531426573cd9a72e890dc386c664411c36feb5b31f8d83e717aa46f8f713d"
+      paymentRef: "base:0x6e88906dcd1323811582e8a2683329a81efa1a964ba922dfdbedfe2a4f7d6e47"
     }) {
       delivered honest latencyMs paymentRef timestamp txHash valid invalidReason
       service { label }

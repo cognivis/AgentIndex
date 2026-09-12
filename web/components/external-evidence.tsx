@@ -44,8 +44,9 @@ export function ExternalEvidenceCard({
         </div>
       </dl>
       <p className="dim">
-        The two providers differed, so consensus stayed neutral; the independent Graph oracle
-        agreed within the 2% tolerance.
+        {evidence.consensusVerdict === 'agree'
+          ? 'The provider agreed with both the peer-price consensus and the independent Graph oracle within the 2% tolerance.'
+          : 'The two providers differed, so consensus stayed neutral; the independent Graph oracle agreed within the 2% tolerance.'}
       </p>
       <div className="external-evidence-links">
         <a href={`https://basescan.org/tx/${paymentTx}`} target="_blank" rel="noreferrer">
