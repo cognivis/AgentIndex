@@ -47,6 +47,8 @@ const probes: ProbeRow[] = [
     paymentRef: '0.0.7162784@1788780243.970842753',
     timestamp: '1757000000',
     txHash: '0xattest1',
+    valid: true,
+    invalidReason: null,
   },
 ];
 

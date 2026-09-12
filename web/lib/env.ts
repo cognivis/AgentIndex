@@ -1,5 +1,5 @@
 // The dashboard runs with cwd inside web/, so Next won't auto-load the
-// monorepo-root .env (RPC url, contract addresses, the demo signer key).
+// configured env file (or the monorepo-root .env for local development).
 // Load it once, server-side, without pulling in a dependency.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -12,7 +12,8 @@ export function loadRootEnv(): void {
   // already provided by the environment (e.g. Vercel) — nothing to do
   if (process.env.AGENTINDEX_REGISTRY_ADDRESS) return;
   try {
-    const txt = readFileSync(resolve(process.cwd(), '../.env'), 'utf8');
+    const envPath = process.env.AGENTINDEX_ENV_FILE ?? resolve(process.cwd(), '../.env');
+    const txt = readFileSync(envPath, 'utf8');
     for (const line of txt.split('\n')) {
       const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
       if (!m) continue;

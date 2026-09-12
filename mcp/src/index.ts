@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
 
-config({ path: resolve(import.meta.dirname, '../../.env') });
+config({ path: process.env.AGENTINDEX_ENV_FILE ?? resolve(import.meta.dirname, '../../.env') });
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createAgentIndexServer } from './server.js';

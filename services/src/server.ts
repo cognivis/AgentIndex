@@ -1,8 +1,7 @@
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
 
-// env lives at the repo root, shared by all workspaces
-config({ path: resolve(import.meta.dirname, '../../.env') });
+config({ path: process.env.AGENTINDEX_ENV_FILE ?? resolve(import.meta.dirname, '../../.env') });
 import { buildApp } from './app.js';
 import { services } from './catalog.js';
 

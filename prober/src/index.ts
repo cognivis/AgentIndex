@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
 
-config({ path: resolve(import.meta.dirname, '../../.env') });
+config({ path: process.env.AGENTINDEX_ENV_FILE ?? resolve(import.meta.dirname, '../../.env') });
 import { discoverFromHost, discoverFromRegistry } from './discovery.js';
 import { discoverExternalFeeds } from './external-feeds.js';
 import { assertExternalRunMode, createPaidFetchRouter } from './payment.js';

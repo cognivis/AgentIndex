@@ -2,7 +2,9 @@
 // Sepolia and publish its manifest (endpoint, price, spec) as text records.
 // Re-runnable: skips names that are already registered.
 import { config } from 'dotenv';
-config({ path: new URL('../../.env', import.meta.url).pathname });
+config({
+  path: process.env.AGENTINDEX_ENV_FILE ?? new URL('../../.env', import.meta.url).pathname,
+});
 
 import {
   createPublicClient,
