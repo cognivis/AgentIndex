@@ -1,8 +1,42 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useRef, useState } from 'react';
 import styles from './page.module.css';
 import { Personas } from '../components/personas';
+import { ExternalEvidenceCard } from '../components/external-evidence';
+import { TICKERSFEED_EVIDENCE } from '../lib/external-evidence';
+
+const TICKERSFEED_ATTESTATION =
+  '0x73319fc4644ef28d2e1063d260a39452102d766e56ffeb6bad0bb853c0c7a863';
+
+const TRUST_STAGES = [
+  {
+    step: 'Identify',
+    protocol: 'ENSv2',
+    detail: 'The service publishes its endpoint, price, and promised response as ENS records.',
+  },
+  {
+    step: 'Pay',
+    protocol: 'Hedera x402',
+    detail: 'An anonymous prober makes a real payment with hard wallet spending controls.',
+  },
+  {
+    step: 'Verify',
+    protocol: 'The Graph',
+    detail: 'The response is checked against its spec, Token API oracle, and peer consensus.',
+  },
+  {
+    step: 'Record',
+    protocol: 'Subgraph',
+    detail: 'A Sepolia attestation becomes a queryable, continuously updated trust score.',
+  },
+  {
+    step: 'Use',
+    protocol: 'MCP',
+    detail: 'Any agent checks who to pay—and who to avoid—before it spends.',
+  },
+];
 
 // Shapes mirror what /api/resolve and /api/receipts return (lib/data.ts).
 type Recommendation = 'trusted' | 'caution' | 'avoid' | 'unproven';
@@ -164,8 +198,15 @@ export default function Playground() {
           ))}
         </div>
         <p id="ask-hint" className={styles.hint}>
-          Every verdict is backed by real x402 payments settled on Hedera and attested on Sepolia.
+          Verdicts are backed by real x402 payments on Hedera and Base, then attested on Sepolia.
         </p>
+
+        <div className={styles.liveStatus} aria-label="AgentIndex live status">
+          <span><i aria-hidden="true" /> Live</span>
+          <span>6 ENS services</span>
+          <span>10-minute autonomous probes</span>
+          <span>4 MCP tools</span>
+        </div>
       </section>
 
       <Personas />
@@ -185,6 +226,55 @@ export default function Playground() {
         )}
 
         {!loading && !error && result && <ResultView data={result} />}
+      </section>
+
+      <section className={styles.trustFlow} aria-labelledby="trust-flow-title">
+        <div className={styles.sectionHead}>
+          <div>
+            <div className={styles.sectionKicker}>From promise to proof</div>
+            <h2 id="trust-flow-title">How a trust score is earned</h2>
+          </div>
+          <Link href="/how">See the complete pipeline →</Link>
+        </div>
+
+        <ol className={styles.stageGrid}>
+          {TRUST_STAGES.map((stage, index) => (
+            <li key={stage.step} className={styles.stageCard}>
+              <div className={styles.stageTop}>
+                <span className={styles.stageNumber}>{index + 1}</span>
+                <span className={styles.protocol}>{stage.protocol}</span>
+              </div>
+              <h3>{stage.step}</h3>
+              <p>{stage.detail}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className={styles.realProof} aria-labelledby="real-proof-title">
+        <div className={styles.sectionHead}>
+          <div>
+            <div className={styles.sectionKicker}>Verified in the real world</div>
+            <h2 id="real-proof-title">A real third-party service, paid and checked</h2>
+          </div>
+          <Link href="/index">Explore all evidence →</Link>
+        </div>
+        <p className={styles.proofIntro}>
+          AgentIndex paid TickersFeed over x402, compared its BTC quote with The Graph, attested
+          the verdict on Sepolia, and added the provider to the live trust index.
+        </p>
+        <ExternalEvidenceCard
+          evidence={TICKERSFEED_EVIDENCE}
+          attestationTx={TICKERSFEED_ATTESTATION}
+        />
+        <div className={styles.finalActions}>
+          <Link className={styles.primaryAction} href="/connect">
+            Connect your agent via MCP →
+          </Link>
+          <Link className={styles.secondaryAction} href="/how">
+            How the verification works
+          </Link>
+        </div>
       </section>
     </div>
   );
