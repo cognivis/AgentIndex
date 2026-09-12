@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">AgentIndex logo</title>
+  <desc id="desc">The lowercase AgentIndex wordmark, with agent in white and index in blue, on a dark square.</desc>
+  <rect width="512" height="512" rx="92" fill="#0d0d0d"/>
+  <rect x="1" y="1" width="510" height="510" rx="91" fill="none" stroke="#ffffff" stroke-opacity="0.1" stroke-width="2"/>
+  <text
+    x="256"
+    y="282"
+    text-anchor="middle"
+    font-family="Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    font-size="78"
+    font-weight="700"
+    letter-spacing="-4"
+  ><tspan fill="#ffffff">agent</tspan><tspan fill="#3987e5">index</tspan></text>
+</svg>
