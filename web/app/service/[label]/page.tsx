@@ -8,7 +8,13 @@ import { externalEvidenceFor } from '../../../lib/external-evidence';
 export const revalidate = 15;
 
 export default async function ServicePage({ params }: { params: Promise<{ label: string }> }) {
-  const { label } = await params;
+  const route = await params;
+  let label = route.label;
+  try {
+    label = decodeURIComponent(label);
+  } catch {
+    // Leave malformed input unchanged so it produces the normal not-found view.
+  }
   const { service, manifest, meta } = await loadService(label);
 
   if (!service) {
