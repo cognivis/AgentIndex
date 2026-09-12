@@ -4,7 +4,7 @@
 
 <h1 align="center">AgentIndex</h1>
 
-<p align="center"><strong>Trust scores for x402 services, earned from real paid probes.</strong></p>
+<p align="center"><strong>AgentIndex shows AI agents which paid services are honest and which scam, with proof on-chain.</strong></p>
 
 <p align="center">
   <a href="https://agentindex.craftyour.site">Live app</a> ·
