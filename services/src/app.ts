@@ -28,6 +28,10 @@ const routeHandlers: Record<string, (req: express.Request, res: express.Response
 
 export function buildApp(opts: AppOptions): Express {
   const app = express();
+  // Production traffic arrives through the loopback Nginx proxy. Trusting only
+  // loopback lets x402 advertise the original HTTPS resource URL without
+  // accepting spoofed forwarding headers from direct public clients.
+  app.set('trust proxy', 'loopback');
   app.use(express.json({ limit: '1mb' }));
 
   if (opts.paywall) {

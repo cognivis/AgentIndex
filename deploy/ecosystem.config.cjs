@@ -7,7 +7,7 @@ module.exports = {
   apps: [
     {
       name: 'agentindex-web',
-      cwd: root,
+      cwd: path.join(root, 'web'),
       script: path.join(root, 'web/node_modules/next/dist/bin/next'),
       args: ['start', '-p', '4100'],
       interpreter: node,

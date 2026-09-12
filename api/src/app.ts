@@ -37,6 +37,9 @@ async function loadCandidates(deps: ApiDeps) {
 
 export function buildApp(deps: ApiDeps, opts: ApiOptions): Express {
   const app = express();
+  // x402 derives its resource URL from the Express request. Honor HTTPS only
+  // when the forwarding header came from our loopback reverse proxy.
+  app.set('trust proxy', 'loopback');
 
   if (opts.paywall) {
     if (!opts.payTo) throw new Error('payTo is required when the paywall is on');
