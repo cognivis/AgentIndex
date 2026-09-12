@@ -23,7 +23,7 @@
 .svg {
   display: block;
   width: 100%;
-  height: auto;
+  height: 112px;
   overflow: visible;
 }
 
@@ -152,4 +152,15 @@
   color: var(--muted);
   font-size: 13px;
   padding: 16px 0;
+}
+
+@media (max-width: 700px) {
+  .head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .svg {
+    height: 96px;
+  }
 }

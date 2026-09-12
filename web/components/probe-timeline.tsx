@@ -26,6 +26,8 @@ const TOP = 10;
 const BASE_Y = 90; // baseline
 const MIN_H = 10;
 const MAX_H = BASE_Y - TOP; // tallest bar
+const MIN_VIEWBOX_W = 600;
+const SINGLE_PROBE_H = 28;
 
 function ago(ts: number) {
   const s = Math.max(0, Math.floor(Date.now() / 1000) - ts);
@@ -56,16 +58,22 @@ export default function ProbeTimeline({ probes }: { probes: ProbeRow[] }) {
   const maxLat = Math.max(...latencies, 1);
 
   const innerW = chrono.length * MARK_W + (chrono.length - 1) * GAP;
-  const width = innerW + PAD_X * 2;
+  // A tiny data set must not make one SVG bar stretch across the whole page.
+  // Keep a stable virtual chart width and center the available observations.
+  const width = Math.max(innerW + PAD_X * 2, MIN_VIEWBOX_W);
+  const startX = (width - innerW) / 2;
   const height = BASE_Y + 6;
 
   const barHeight = (lat: number) => {
+    // Relative latency has no meaning with only one observation. Render a
+    // compact marker instead of treating it as both the minimum and maximum.
+    if (chrono.length === 1) return SINGLE_PROBE_H;
     // taller = slower; clamp so even fast probes stay visible.
     const h = MIN_H + (lat / maxLat) * (MAX_H - MIN_H);
     return Math.max(MIN_H, Math.min(MAX_H, h));
   };
 
-  const xOf = (i: number) => PAD_X + i * (MARK_W + GAP);
+  const xOf = (i: number) => startX + i * (MARK_W + GAP);
 
   // Tooltip anchor as a percentage so the absolutely-positioned HTML tooltip
   // tracks the SVG regardless of its responsive on-screen width.
@@ -76,7 +84,9 @@ export default function ProbeTimeline({ probes }: { probes: ProbeRow[] }) {
       <div className={styles.head}>
         <h2 style={{ margin: 0 }}>Probe timeline</h2>
         <span className={styles.caption}>
-          last {chrono.length} paid probes · oldest → newest · bar height = latency
+          {chrono.length === 1
+            ? '1 paid probe · more observations will build the timeline'
+            : `last ${chrono.length} paid probes · oldest → newest · bar height = latency`}
         </span>
       </div>
 
